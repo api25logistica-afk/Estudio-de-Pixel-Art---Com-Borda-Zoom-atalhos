@@ -62,7 +62,9 @@ buffer.width = artCanvas.width;
 buffer.height = artCanvas.height;
 
 // state
-let size = 64; // cells per side
+let size = 64; // backward compatibility (square)
+let gridCols = 64;
+let gridRows = 64;
 let cell = artCanvas.width / size;
 let currentColor = '#000000';
 let colorHistory = [];
@@ -99,20 +101,27 @@ function updateUndoRedoButtons(){ document.getElementById('undoBtn').disabled = 
 // draw grid path once per render to avoid double-stroke at intersections
 function drawGridOnContext(targetCtx){
   const path = new Path2D();
-  const half = 0.5;
   const cw = targetCtx === ctx ? artCanvas.width : buffer.width;
   const ch = targetCtx === ctx ? artCanvas.height : buffer.height;
-  const localCell = cell; // cell is same for buffer and canvas (bitmap size)
-  targetCtx.lineWidth = 0.7;
-  targetCtx.strokeStyle = '#a3a0a0';
-  for(let i=0;i<=size;i++){
-    const x = Math.round(i * localCell) + half;
-    path.moveTo(x,0); path.lineTo(x,ch);
+
+  const stepX = cw / gridCols;
+  const stepY = ch / gridRows;
+
+  targetCtx.lineWidth = 1.2; // grid mais visível
+  targetCtx.strokeStyle = '#8a8a8a';
+
+  for(let i=0;i<=gridCols;i++){
+    const x = Math.round(i * stepX) + 0.5;
+    path.moveTo(x, 0);
+    path.lineTo(x, ch);
   }
-  for(let j=0;j<=size;j++){
-    const y = Math.round(j * localCell) + half;
-    path.moveTo(0,y); path.lineTo(cw,y);
+
+  for(let j=0;j<=gridRows;j++){
+    const y = Math.round(j * stepY) + 0.5;
+    path.moveTo(0, y);
+    path.lineTo(cw, y);
   }
+
   targetCtx.stroke(path);
 }
 
@@ -129,22 +138,21 @@ function renderAll(){
 function resizeBufferToCanvas(){ buffer.width = artCanvas.width; buffer.height = artCanvas.height; }
 
 function paintCellAt(xPixel, yPixel){
-  const x = Math.floor(xPixel / cell);
-  const y = Math.floor(yPixel / cell);
-  if(x<0||y<0||x>=size||y>=size) return;
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
 
-  // alinhar exatamente ao grid para evitar bordas borradas
-  const px = Math.round(x * cell);
-  const py = Math.round(y * cell);
-  const w = Math.round(cell);
-  const h = Math.round(cell);
+  const x = Math.floor(xPixel / stepX);
+  const y = Math.floor(yPixel / stepY);
+  if(x < 0 || y < 0 || x >= gridCols || y >= gridRows) return;
 
-  bctx.save();
-  bctx.globalAlpha = 1;
+  const px = Math.round(x * stepX);
+  const py = Math.round(y * stepY);
+  const w = Math.ceil(stepX);
+  const h = Math.ceil(stepY);
+
   bctx.imageSmoothingEnabled = false;
   bctx.fillStyle = (currentColor === 'eraser') ? 'white' : currentColor;
   bctx.fillRect(px, py, w, h);
-  bctx.restore();
 
   renderAll();
 }
@@ -175,7 +183,12 @@ artCanvas.addEventListener('pointermove', (e)=>{ if(!isDrawing) return; const po
 
 // toolbar actions
 document.getElementById('newArt').onclick = ()=>{ pushUndo(); bctx.clearRect(0,0,buffer.width,buffer.height); renderAll(); };
-document.getElementById('gridSize').onchange = (e)=>{ size = parseInt(e.target.value,10)||64; cell = artCanvas.width/size; renderAll(); };
+document.getElementById('gridSize').onchange = (e)=>{
+  const v = parseInt(e.target.value,10)||64;
+  gridCols = v;
+  gridRows = v;
+  renderAll();
+};
 
 // download (renders current buffer + grid)
 document.getElementById('download').onclick = ()=>{
@@ -217,7 +230,21 @@ function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) retur
 document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; eraserBtn.classList.remove('activeTool'); document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected')); const last = document.querySelector('#colorHistory .color-btn:last-child'); if(last) last.classList.add('selected'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
 
 // create custom grid
-document.getElementById('createGrid').onclick = ()=>{ const w = parseInt(prompt('Largura do grid (ex: 64):'),10); const h = parseInt(prompt('Altura do grid (ex: 64):'),10); if(!w || !h || w<=0 || h<=0) return alert('Valores inválidos'); size = w; artCanvas.width = 640; artCanvas.height = Math.round(640 * (h / w)); buffer.width = artCanvas.width; buffer.height = artCanvas.height; cell = artCanvas.width / size; renderAll(); };
+document.getElementById('createGrid').onclick = ()=>{
+  const w = parseInt(prompt('Largura do grid (colunas):'),10);
+  const h = parseInt(prompt('Altura do grid (linhas):'),10);
+  if(!w || !h || w<=0 || h<=0) return alert('Valores inválidos');
+
+  gridCols = w;
+  gridRows = h;
+
+  artCanvas.width = 640;
+  artCanvas.height = Math.round(640 * (h / w));
+  buffer.width = artCanvas.width;
+  buffer.height = artCanvas.height;
+
+  renderAll();
+};
 
 // seed colors
 const seeds = ['#000000', '#141414', '#242424', '#333333','#424242', '#5c5c5c','#737373', '#8c8c8c', '#a3a3a3', '#bdbdbd', '#e0e0e0', '#2b3733',
