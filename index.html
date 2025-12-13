@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -9,6 +8,7 @@
     #toolbar{ display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center; }
     button, select, input{ padding:6px 8px; font-size:14px; }
     .color-btn{ width:28px; height:28px; border:1px solid #000; cursor:pointer; box-sizing:border-box; display:inline-block; }
+    .color-btn.selected{ outline:3px solid #333; }
     #grid{ background:white; border:none; image-rendering:pixelated; cursor:crosshair; touch-action:none; width:640px; height:640px; }
     #colorHistory{ display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; max-width:640px; max-height:160px; overflow:auto; padding:5px; background:transparent; }
     #colorHistory .color-btn{ flex:0 0 calc((640px - 19*5px) / 20); }
@@ -132,10 +132,20 @@ function paintCellAt(xPixel, yPixel){
   const x = Math.floor(xPixel / cell);
   const y = Math.floor(yPixel / cell);
   if(x<0||y<0||x>=size||y>=size) return;
-  const px = Math.floor(x*cell);
-  const py = Math.floor(y*cell);
+
+  // alinhar exatamente ao grid para evitar bordas borradas
+  const px = Math.round(x * cell);
+  const py = Math.round(y * cell);
+  const w = Math.round(cell);
+  const h = Math.round(cell);
+
+  bctx.save();
+  bctx.globalAlpha = 1;
+  bctx.imageSmoothingEnabled = false;
   bctx.fillStyle = (currentColor === 'eraser') ? 'white' : currentColor;
-  bctx.fillRect(px, py, Math.ceil(cell), Math.ceil(cell));
+  bctx.fillRect(px, py, w, h);
+  bctx.restore();
+
   renderAll();
 }
 
@@ -197,15 +207,20 @@ document.getElementById('undoBtn').onclick = undo;
 document.getElementById('redoBtn').onclick = redo;
 
 // color history
-function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) return; if(!colorHistory.includes(hex)){ colorHistory.push(hex); const div = document.getElementById('colorHistory'); const btn = document.createElement('div'); btn.className='color-btn'; btn.style.background=hex; btn.title=hex; btn.onclick = ()=>{ currentColor = hex; eraserBtn.classList.remove('activeTool'); }; div.appendChild(btn); } }
+function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) return; if(!colorHistory.includes(hex)){ colorHistory.push(hex); const div = document.getElementById('colorHistory'); const btn = document.createElement('div'); btn.className='color-btn'; btn.style.background=hex; btn.title=hex; btn.onclick = ()=>{
+        currentColor = hex;
+        eraserBtn.classList.remove('activeTool');
+        document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+      }; div.appendChild(btn); } }
 
-document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; eraserBtn.classList.remove('activeTool'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
+document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; eraserBtn.classList.remove('activeTool'); document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected')); const last = document.querySelector('#colorHistory .color-btn:last-child'); if(last) last.classList.add('selected'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
 
 // create custom grid
 document.getElementById('createGrid').onclick = ()=>{ const w = parseInt(prompt('Largura do grid (ex: 64):'),10); const h = parseInt(prompt('Altura do grid (ex: 64):'),10); if(!w || !h || w<=0 || h<=0) return alert('Valores inválidos'); size = w; artCanvas.width = 640; artCanvas.height = Math.round(640 * (h / w)); buffer.width = artCanvas.width; buffer.height = artCanvas.height; cell = artCanvas.width / size; renderAll(); };
 
 // seed colors
-const seeds = ['#000000','#1a1a1a','#303030','#4a4a4a','#6e6e6e','#919191','#b5b5b5','#c7c6c5','#1f1204','#341d08','#4b280a','#633309','#7c3f06','#964b00','#ac6730','#c08457','#d3a27f','#cfb99e','#e4c0a8','#dbcab5','#c95d00','#ff7600','#ff8924','#ff9840','#ffb300','#ffcc00','#ffe682','#bec300','#b0b600','#a2a900','#adac40','#9d9a4d','#8c8958','#7b7860','#24230f','#183800','#2d6900','#45a100','#63e800','#96f74f','#21bd13','#00ff3c','#30ff61','#61ff86','#9bfab1','#0b8f2a','#17a362','#0eed9f','#047d53','#4ef5ba','#74f7c9','#a9fcdf','#00ffc8','#09756e','#02bfb3','#02aec4','#0c7b8a','#014852','#009fde','#0080ff','#025cb5','#0036a1','#001eb3','#000587','#000240','#5900ff','#471a9c','#1d0054','#281352','#513885','#bfa1ff','#8800ff','#8a6ec4','#b700ff','#cd4fff','#e091ff','#e600ff','#631c6b','#ad1081','#700f55','#2b0320','#ff0066','#a30242','#4d0521','#ad0026','#ff0038','#ff0015','#ab000e','#630008','#300004','#782229','#c24e57','#ff8089','#ffb3b8', '#ffffff', '#465c4d'];
+const seeds = ['#ff0015','#ab000e','#630008'];
 seeds.forEach(addColorToHistory);
 
 // initial
