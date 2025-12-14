@@ -1,4 +1,5 @@
 
+
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -31,6 +32,8 @@
   <button id="redoBtn">Refazer</button>
   <button id="download">Download</button>
   <button id="eraser">Borracha</button>
+  <button id="toggleGrid" class="activeTool">Grid ON</button>
+  <button id="toggleExportGrid" class="activeTool">Grid no Download</button>
 
   <label for="gridSize">Grid:</label>
   <select id="gridSize">
@@ -70,6 +73,8 @@ let cell = artCanvas.width / size;
 let currentColor = '#000000';
 let colorHistory = [];
 let isDrawing = false;
+let showGrid = true; // grid de visualização
+let includeGridOnExport = true; // grid no download
 
 // undo/redo (store buffer dataURLs)
 const undoStack = [];
@@ -111,29 +116,33 @@ function drawGridOnContext(targetCtx){
   targetCtx.lineWidth = 0.7; // grid mais visível
   targetCtx.strokeStyle = '#8a8a8a';
 
-  for(let i=0;i<=gridCols;i++){
+  // linhas verticais
+  for(let i = 0; i <= gridCols; i++){
     const x = Math.round(i * stepX) + 0.5;
     path.moveTo(x, 0);
     path.lineTo(x, ch);
   }
 
-  for(let j=0;j<=gridRows;j++){
+  // linhas horizontais
+  for(let j = 0; j <= gridRows; j++){
     const y = Math.round(j * stepY) + 0.5;
     path.moveTo(0, y);
     path.lineTo(cw, y);
   }
 
   targetCtx.stroke(path);
+
+  // contorno final (direita e embaixo garantidos)
+  targetCtx.strokeRect(0.5, 0.5, cw - 1, ch - 1);
 }
 
 // render: draw buffer (pixels) then grid on top
 function renderAll(){
-  // clear main ctx
   ctx.clearRect(0,0,artCanvas.width,artCanvas.height);
-  // draw buffer (scaled 1:1)
   ctx.drawImage(buffer, 0, 0);
-  // draw grid lines on top (single path)
-  drawGridOnContext(ctx);
+  if(showGrid){
+    drawGridOnContext(ctx);
+  }
 }
 
 function resizeBufferToCanvas(){ buffer.width = artCanvas.width; buffer.height = artCanvas.height; }
@@ -191,7 +200,7 @@ document.getElementById('gridSize').onchange = (e)=>{
   renderAll();
 };
 
-// download (renders current buffer + grid)
+// download (respeita opção de grid no download)
 document.getElementById('download').onclick = ()=>{
   const tmp = document.createElement('canvas');
   tmp.width = artCanvas.width;
@@ -202,9 +211,13 @@ document.getElementById('download').onclick = ()=>{
   tctx.fillStyle = "white";
   tctx.fillRect(0, 0, tmp.width, tmp.height);
 
-  // arte + grid
+  // arte
   tctx.drawImage(buffer,0,0);
-  drawGridOnContext(tctx);
+
+  // grid opcional no export
+  if(includeGridOnExport){
+    drawGridOnContext(tctx);
+  }
 
   const link = document.createElement('a');
   link.download = 'pixel_art.png';
@@ -215,6 +228,23 @@ document.getElementById('download').onclick = ()=>{
 // eraser button toggle
 const eraserBtn = document.getElementById('eraser');
 eraserBtn.onclick = ()=>{ currentColor = (currentColor === 'eraser') ? '#000000' : 'eraser'; eraserBtn.classList.toggle('activeTool', currentColor === 'eraser'); };
+
+// grid toggle (visualização)
+const toggleGridBtn = document.getElementById('toggleGrid');
+toggleGridBtn.onclick = ()=>{
+  showGrid = !showGrid;
+  toggleGridBtn.textContent = showGrid ? 'Grid ON' : 'Grid OFF';
+  toggleGridBtn.classList.toggle('activeTool', showGrid);
+  renderAll();
+};
+
+// grid no download toggle
+const toggleExportGridBtn = document.getElementById('toggleExportGrid');
+toggleExportGridBtn.onclick = ()=>{
+  includeGridOnExport = !includeGridOnExport;
+  toggleExportGridBtn.textContent = includeGridOnExport ? 'Grid no Download' : 'Sem Grid no Download';
+  toggleExportGridBtn.classList.toggle('activeTool', includeGridOnExport);
+};
 
 // undo/redo buttons
 document.getElementById('undoBtn').onclick = undo;
