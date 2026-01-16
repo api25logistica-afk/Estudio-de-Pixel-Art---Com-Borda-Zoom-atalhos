@@ -54,7 +54,8 @@
         <h4>Arquivo</h4>
         <div class="toolbox-row">
           <button id="newArt">Nova Arte</button>
-          <button id="download">Download</button>
+          <button id="download">Baixar</button>
+          <button id="downloadTransparent">PNG</button>
         </div>
       </div>
 
@@ -232,8 +233,14 @@ function paintCellAt(xPixel, yPixel){
   const h = Math.ceil(stepY);
 
   bctx.imageSmoothingEnabled = false;
-  bctx.fillStyle = (currentColor === 'eraser') ? 'white' : currentColor;
-  bctx.fillRect(px, py, w, h);
+
+  if(currentColor === 'eraser'){
+    // apaga de verdade (transparência real para PNG)
+    bctx.clearRect(px, py, w, h);
+  } else {
+    bctx.fillStyle = currentColor;
+    bctx.fillRect(px, py, w, h);
+  }
 
   renderAll();
 }
@@ -271,7 +278,7 @@ document.getElementById('gridSize').onchange = (e)=>{
   renderAll();
 };
 
-// download (respeita opção de grid no download)
+// download PNG com fundo (respeita opção de grid no download)
 document.getElementById('download').onclick = ()=>{
   const tmp = document.createElement('canvas');
   tmp.width = artCanvas.width;
@@ -292,7 +299,31 @@ document.getElementById('download').onclick = ()=>{
 
   const link = document.createElement('a');
   link.download = 'pixel_art.png';
-  link.href = tmp.toDataURL();
+  link.href = tmp.toDataURL('image/png');
+  link.click();
+};
+
+// download PNG transparente
+document.getElementById('downloadTransparent').onclick = ()=>{
+  const tmp = document.createElement('canvas');
+  tmp.width = artCanvas.width;
+  tmp.height = artCanvas.height;
+  const tctx = tmp.getContext('2d');
+
+  // transparente por padrão
+  tctx.clearRect(0, 0, tmp.width, tmp.height);
+
+  // arte
+  tctx.drawImage(buffer,0,0);
+
+  // grid opcional no export
+  if(includeGridOnExport){
+    drawGridOnContext(tctx);
+  }
+
+  const link = document.createElement('a');
+  link.download = 'pixel_art_transparente.png';
+  link.href = tmp.toDataURL('image/png');
   link.click();
 };
 
@@ -400,6 +431,11 @@ artCanvas.addEventListener('touchend', (e)=>{
   lastTapTime = now; lastTapX = x; lastTapY = y;
 });
 
+  
+  
+
 </script>
 </body>
 </html>
+
+
