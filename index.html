@@ -1,6 +1,3 @@
-
-
-
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -32,88 +29,326 @@
     .color-btn{ width:28px; height:28px; border:1px solid #000; cursor:pointer; box-sizing:border-box; display:inline-block; border-radius:6px; }
     .color-btn.selected{ outline:3px solid var(--accent); }
     #grid{ background:white; border-radius:12px; image-rendering:pixelated; cursor:crosshair; touch-action:none; width:640px; height:640px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
-    #colorHistory{ display:flex; flex-wrap:wrap; gap:5px; margin-top:-10px; max-width:320px; max-height:600px; overflow:auto; padding:8px; background:transparent; }
+    #colorHistory{ display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; max-width:320px; max-height:300px; overflow:auto; padding:8px; background:transparent; }
     #colorHistory::-webkit-scrollbar{ height:1000px; width:20px; }
     #colorHistory::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
     #colorHistory::-webkit-scrollbar-track{ background:#020617; }
     #customColor{ width:90px; }
     .activeTool{ outline:30000px solid rgba(139,92,246,0.08); }
+    
+    /* TIMELINE STYLES */
+    #timeline-container {
+      margin-top: 20px;
+      background: var(--panel);
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.35);
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 800px;
+    }
+    
+    #timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    #timeline-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    #frames-container {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 10px;
+      background: var(--panel-2);
+      border-radius: 8px;
+      min-height: 150px;
+    }
+    
+    .frame {
+      position: relative;
+      min-width: 120px;
+      height: 120px;
+      background: #0b1220;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .frame.active {
+      border-color: var(--accent);
+    }
+    
+    .frame canvas {
+      width: 80px;
+      height: 80px;
+      image-rendering: pixelated;
+      background: white;
+    }
+    
+    .frame-number {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    
+    .frame-duration {
+      position: absolute;
+      bottom: 5px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    
+    .frame-actions {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      display: flex;
+      gap: 3px;
+    }
+    
+    .frame-btn {
+      width: 20px;
+      height: 20px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+    
+    #animation-preview {
+      margin-top: 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    #preview-canvas {
+      background: white;
+      border-radius: 8px;
+      image-rendering: pixelated;
+    }
+    
+    #preview-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    #playback-speed {
+      width: 100px;
+    }
+    
+    /* Frame duration controls */
+    .frame-duration-controls {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      display: flex;
+      gap: 2px;
+    }
+    
+    .duration-btn {
+      width: 18px;
+      height: 18px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+    }
+    
+    .duration-btn:hover {
+      background: var(--accent);
+    }
+    
+    /* Custom speed input */
+    #custom-speed-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    
+    #custom-speed-input {
+      width: 80px;
+      padding: 4px 8px;
+    }
+    
+    #apply-custom-speed {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    
+    /* Layout principal reorganizado */
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .canvas-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .canvas-with-tools {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    
+    .tools-sidebar {
+      display: flex;
+      flex-direction: column;
+      width: 200px;
+    }
   </style>
 </head>
 <body>
 
 <h1>Pixel Art Studio</h1>
 
-<div id="main-layout" style="display:flex; gap:20px; align-items:flex-start;">
+<div class="main-content">
+  <!-- TOOLBOX (ACIMA DO GRID) -->
+  <div id="toolbar">
 
-  <!-- TOOLBOX (ESQUERDA) -->
-  <div style="display:flex; flex-direction:column;">
-    <div id="toolbar">
-
-      <div class="toolbox-group">
-        <h4>Arquivo</h4>
-        <div class="toolbox-row">
-          <button id="newArt">Nova Arte</button>
-          <button id="download">Baixar</button>
-          <button id="downloadTransparent">PNG</button>
-        </div>
+    <div class="toolbox-group">
+      <h4>Arquivo</h4>
+      <div class="toolbox-row">
+        <button id="newArt">Nova Arte</button>
+        <button id="download">Baixar</button>
+        <button id="downloadTransparent">PNG</button>
       </div>
-
-      <div class="toolbox-group">
-        <h4>Editar</h4>
-        <div class="toolbox-row">
-          <button id="undoBtn">Desfazer</button>
-          <button id="redoBtn">Refazer</button>
-          <button id="eraser">Borracha</button>
-        </div>
-      </div>
-
-      <div class="toolbox-group">
-        <h4>Grid</h4>
-        <div class="toolbox-row">
-          <button id="toggleGrid" class="activeTool">Grid ON</button>
-          <button id="toggleExportGrid" class="activeTool">Grid no Download</button>
-        </div>
-        <div class="toolbox-row">
-          <label for="gridSize">Tamanho</label>
-          <select id="gridSize">
-            <option value="16" >16 x 16</option>
-            <option value="32">32 x 32</option>
-            <option value="64" selected>64 x 64</option>
-            <option value="128">128 x 128</option>
-            <option value="256">256 x 256</option>
-          </select>
-          <button id="createGrid">Criar Grid</button>
-        </div>
-      </div>
-
-      <div class="toolbox-group">
-        <h4>Cores</h4>
-        <div class="toolbox-row">
-          <input type="text" id="customColor" placeholder="#hex" />
-          <button id="addColor">Criar Cor</button>
-        </div>
-        <div class="toolbox-row">
-          <label style="font-size:12px;color:var(--muted)">Accent</label>
-          <input type="color" id="accentPicker" value="#8b5cf6" />
-        </div>
-      </div>
-
     </div>
 
+    <div class="toolbox-group">
+      <h4>Editar</h4>
+      <div class="toolbox-row">
+        <button id="undoBtn">Desfazer</button>
+        <button id="redoBtn">Refazer</button>
+        <button id="eraser">Borracha</button>
+      </div>
+    </div>
+
+    <div class="toolbox-group">
+      <h4>Grid</h4>
+      <div class="toolbox-row">
+        <button id="toggleGrid" class="activeTool">Grid ON</button>
+        <button id="toggleExportGrid" class="activeTool">Grid no Download</button>
+      </div>
+      <div class="toolbox-row">
+        <label for="gridSize">Tamanho</label>
+        <select id="gridSize">
+          <option value="16" >16 x 16</option>
+          <option value="32">32 x 32</option>
+          <option value="64" selected>64 x 64</option>
+          <option value="128">128 x 128</option>
+          <option value="256">256 x 256</option>
+        </select>
+        <button id="createGrid">Criar Grid</button>
+      </div>
+    </div>
+
+    <div class="toolbox-group">
+      <h4>Cores</h4>
+      <div class="toolbox-row">
+        <input type="text" id="customColor" placeholder="#hex" />
+        <button id="addColor">Criar Cor</button>
+      </div>
+      <div class="toolbox-row">
+        <label style="font-size:12px;color:var(--muted)">Accent</label>
+        <input type="color" id="accentPicker" value="#8b5cf6" />
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SEÇÃO DO CANVAS E FERRAMENTAS -->
+  <div class="canvas-section">
+    <div class="canvas-with-tools">
+      <!-- CANVAS -->
+      <div>
+        <canvas id="grid" width="640" height="640"></canvas>
+      </div>
+
+      <!-- HISTÓRICO DE CORES (LATERAL DO GRID) -->
+      <div class="tools-sidebar">
+        <h4 style="margin:0 0 10px 0; color:var(--muted)">Cores Recentes</h4>
+        <div id="colorHistory"></div>
+      </div>
     </div>
   </div>
 
-  <!-- ÁREA CENTRAL: CANVAS + HISTÓRICO DE CORES -->
-  <div style="display:flex; gap:12px; align-items:flex-start;">
-    <!-- CANVAS -->
-    <canvas id="grid" width="640" height="640"></canvas>
-
-    <!-- HISTÓRICO DE CORES (LATERAL DO GRID) -->
-  <div style="display:flex; flex-direction:column;">
-    <h3 style="margin-top:0;"></h3>
-    <div id="colorHistory">  </div>
-
+  <!-- TIMELINE DE ANIMAÇÃO (ABAIXO DO GRID) -->
+  <div id="timeline-container">
+    <div id="timeline-header">
+      <h3 style="margin:0;">Timeline de Animação</h3>
+      <div id="timeline-controls">
+        <button id="addFrame">+ Frame</button>
+        <button id="duplicateFrame">Duplicar</button>
+        <button id="deleteFrame">Remover</button>
+        <button id="previewAnimation">Preview</button>
+        <button id="exportGIF">Exportar GIF</button>
+      </div>
+    </div>
+    
+    <div id="frames-container">
+      <!-- Frames serão adicionados aqui dinamicamente -->
+    </div>
+    
+    <!-- Controle de velocidade customizada -->
+    <div id="custom-speed-container">
+      <span style="font-size:12px; color:var(--muted)">Velocidade customizada (ms):</span>
+      <input type="number" id="custom-speed-input" min="50" max="2000" step="50" value="250" />
+      <button id="apply-custom-speed">Aplicar</button>
+      <button id="apply-all-speed">Aplicar a todos</button>
+    </div>
+    
+    <div id="animation-preview">
+      <canvas id="preview-canvas" width="320" height="320"></canvas>
+      <div id="preview-controls">
+        <button id="playPause">▶ Play</button>
+        <button id="stopPreview">⏹ Stop</button>
+        <span>Velocidade:</span>
+        <select id="playback-speed">
+          <option value="1000">0.25x</option>
+          <option value="500">0.5x</option>
+          <option value="250" selected>1x</option>
+          <option value="125">2x</option>
+          <option value="62">4x</option>
+          <option value="custom">Custom</option>
+        </select>
+        <span id="frame-counter">Frame: 1/1</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -151,6 +386,12 @@ let includeGridOnExport = true; // grid no download
 // undo/redo (store buffer dataURLs)
 const undoStack = [];
 const redoStack = [];
+
+// TIMELINE STATE
+let frames = [];
+let currentFrameIndex = 0;
+let isPlaying = false;
+let playInterval = null;
 
 function pushUndo(){
   try{
@@ -431,11 +672,337 @@ artCanvas.addEventListener('touchend', (e)=>{
   lastTapTime = now; lastTapX = x; lastTapY = y;
 });
 
+// ==============================================
+// TIMELINE FUNCTIONS
+// ==============================================
+
+function saveCurrentFrame() {
+  if (frames[currentFrameIndex]) {
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = buffer.width;
+    frameCanvas.height = buffer.height;
+    const frameCtx = frameCanvas.getContext('2d');
+    frameCtx.drawImage(buffer, 0, 0);
+    frames[currentFrameIndex].imageData = frameCanvas.toDataURL();
+  }
+}
+
+function loadFrame(index) {
+  if (frames[index]) {
+    const img = new Image();
+    img.onload = () => {
+      bctx.clearRect(0, 0, buffer.width, buffer.height);
+      bctx.drawImage(img, 0, 0);
+      renderAll();
+    };
+    img.src = frames[index].imageData;
+    currentFrameIndex = index;
+    updateFrameDisplay();
+  }
+}
+
+function addFrame() {
+  saveCurrentFrame();
+  
+  const frameCanvas = document.createElement('canvas');
+  frameCanvas.width = buffer.width;
+  frameCanvas.height = buffer.height;
+  const frameCtx = frameCanvas.getContext('2d');
+  frameCtx.drawImage(buffer, 0, 0);
+  
+  frames.push({
+    imageData: frameCanvas.toDataURL(),
+    duration: 250 // ms
+  });
+  
+  currentFrameIndex = frames.length - 1;
+  renderFrames();
+  updateFrameDisplay();
+}
+
+function duplicateFrame() {
+  if (frames.length === 0) return;
+  
+  saveCurrentFrame();
+  
+  const frameCanvas = document.createElement('canvas');
+  frameCanvas.width = buffer.width;
+  frameCanvas.height = buffer.height;
+  const frameCtx = frameCanvas.getContext('2d');
+  frameCtx.drawImage(buffer, 0, 0);
+  
+  frames.splice(currentFrameIndex + 1, 0, {
+    imageData: frameCanvas.toDataURL(),
+    duration: frames[currentFrameIndex].duration
+  });
+  
+  currentFrameIndex++;
+  renderFrames();
+  updateFrameDisplay();
+}
+
+function deleteFrame() {
+  if (frames.length <= 1) return;
+  
+  frames.splice(currentFrameIndex, 1);
+  
+  if (currentFrameIndex >= frames.length) {
+    currentFrameIndex = frames.length - 1;
+  }
+  
+  loadFrame(currentFrameIndex);
+  renderFrames();
+  updateFrameDisplay();
+}
+
+function updateFrameDuration(index, change) {
+  if (frames[index]) {
+    let newDuration = frames[index].duration + change;
+    // Limitar entre 50ms e 2000ms
+    newDuration = Math.max(50, Math.min(2000, newDuration));
+    frames[index].duration = newDuration;
+    renderFrames();
+  }
+}
+
+function renderFrames() {
+  const container = document.getElementById('frames-container');
+  container.innerHTML = '';
+  
+  frames.forEach((frame, index) => {
+    const frameDiv = document.createElement('div');
+    frameDiv.className = `frame ${index === currentFrameIndex ? 'active' : ''}`;
+    frameDiv.onclick = () => {
+      saveCurrentFrame();
+      loadFrame(index);
+    };
+    
+    const frameNumber = document.createElement('div');
+    frameNumber.className = 'frame-number';
+    frameNumber.textContent = index + 1;
+    
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = 80;
+    frameCanvas.height = 80;
+    const frameCtx = frameCanvas.getContext('2d');
+    
+    const img = new Image();
+    img.onload = () => {
+      frameCtx.drawImage(img, 0, 0, 80, 80);
+    };
+    img.src = frame.imageData;
+    
+    const frameDuration = document.createElement('div');
+    frameDuration.className = 'frame-duration';
+    frameDuration.textContent = `${frame.duration}ms`;
+    
+    // Controles de duração
+    const durationControls = document.createElement('div');
+    durationControls.className = 'frame-duration-controls';
+    
+    const minusBtn = document.createElement('button');
+    minusBtn.className = 'duration-btn';
+    minusBtn.innerHTML = '-';
+    minusBtn.onclick = (e) => {
+      e.stopPropagation();
+      updateFrameDuration(index, -50);
+    };
+    
+    const plusBtn = document.createElement('button');
+    plusBtn.className = 'duration-btn';
+    plusBtn.innerHTML = '+';
+    plusBtn.onclick = (e) => {
+      e.stopPropagation();
+      updateFrameDuration(index, 50);
+    };
+    
+    durationControls.appendChild(minusBtn);
+    durationControls.appendChild(plusBtn);
+    
+    const frameActions = document.createElement('div');
+    frameActions.className = 'frame-actions';
+    
+    const upBtn = document.createElement('button');
+    upBtn.className = 'frame-btn';
+    upBtn.innerHTML = '↑';
+    upBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (index > 0) {
+        [frames[index], frames[index - 1]] = [frames[index - 1], frames[index]];
+        currentFrameIndex = index - 1;
+        renderFrames();
+        updateFrameDisplay();
+      }
+    };
+    
+    const downBtn = document.createElement('button');
+    downBtn.className = 'frame-btn';
+    downBtn.innerHTML = '↓';
+    downBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (index < frames.length - 1) {
+        [frames[index], frames[index + 1]] = [frames[index + 1], frames[index]];
+        currentFrameIndex = index + 1;
+        renderFrames();
+        updateFrameDisplay();
+      }
+    };
+    
+    frameActions.appendChild(upBtn);
+    frameActions.appendChild(downBtn);
+    
+    frameDiv.appendChild(frameNumber);
+    frameDiv.appendChild(frameCanvas);
+    frameDiv.appendChild(frameDuration);
+    frameDiv.appendChild(durationControls);
+    frameDiv.appendChild(frameActions);
+    container.appendChild(frameDiv);
+  });
+}
+
+function updateFrameDisplay() {
+  document.querySelectorAll('.frame').forEach((frame, index) => {
+    frame.classList.toggle('active', index === currentFrameIndex);
+  });
+  document.getElementById('frame-counter').textContent = `Frame: ${currentFrameIndex + 1}/${frames.length}`;
+}
+
+function previewAnimation() {
+  const previewContainer = document.getElementById('animation-preview');
+  const previewCanvas = document.getElementById('preview-canvas');
+  const previewCtx = previewCanvas.getContext('2d');
+  const frameCounter = document.getElementById('frame-counter');
+  const playPauseBtn = document.getElementById('playPause');
+  const playbackSpeed = document.getElementById('playback-speed');
+  
+  previewContainer.style.display = 'flex';
+  
+  if (frames.length === 0) {
+    alert('Adicione pelo menos um frame para visualizar a animação!');
+    return;
+  }
+  
+  let previewFrameIndex = 0;
+  
+  function drawPreviewFrame() {
+    if (frames[previewFrameIndex]) {
+      const img = new Image();
+      img.onload = () => {
+        previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+        previewCtx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+        frameCounter.textContent = `Frame: ${previewFrameIndex + 1}/${frames.length}`;
+      };
+      img.src = frames[previewFrameIndex].imageData;
+    }
+  }
+  
+  function playAnimation() {
+    if (isPlaying) return;
+    
+    isPlaying = true;
+    playPauseBtn.textContent = '⏸ Pause';
+    
+    let speed;
+    if (playbackSpeed.value === 'custom') {
+      speed = parseInt(document.getElementById('custom-speed-input').value);
+    } else {
+      speed = parseInt(playbackSpeed.value);
+    }
+    
+    playInterval = setInterval(() => {
+      previewFrameIndex = (previewFrameIndex + 1) % frames.length;
+      drawPreviewFrame();
+    }, speed);
+  }
+  
+  function pauseAnimation() {
+    if (!isPlaying) return;
+    
+    isPlaying = false;
+    playPauseBtn.textContent = '▶ Play';
+    clearInterval(playInterval);
+  }
+  
+  function stopAnimation() {
+    isPlaying = false;
+    playPauseBtn.textContent = '▶ Play';
+    clearInterval(playInterval);
+    previewFrameIndex = 0;
+    drawPreviewFrame();
+  }
+  
+  playPauseBtn.onclick = () => {
+    if (isPlaying) {
+      pauseAnimation();
+    } else {
+      playAnimation();
+    }
+  };
+  
+  document.getElementById('stopPreview').onclick = stopAnimation;
+  
+  playbackSpeed.onchange = () => {
+    if (isPlaying) {
+      pauseAnimation();
+      playAnimation();
+    }
+  };
+  
+  drawPreviewFrame();
+}
+
+function exportGIF() {
+  if (frames.length === 0) {
+    alert('Adicione pelo menos um frame para exportar como GIF!');
+    return;
+  }
+  
+  alert('Exportar GIF - Esta funcionalidade requer uma biblioteca externa como gif.js. Para implementação completa, adicione a biblioteca gif.js ao projeto.');
+}
+
+// Aplicar velocidade customizada ao frame atual
+document.getElementById('apply-custom-speed').onclick = () => {
+  const customSpeed = parseInt(document.getElementById('custom-speed-input').value);
+  if (isNaN(customSpeed) || customSpeed < 50 || customSpeed > 2000) {
+    alert('Por favor, insira um valor entre 50 e 2000 ms');
+    return;
+  }
+  
+  if (frames[currentFrameIndex]) {
+    frames[currentFrameIndex].duration = customSpeed;
+    renderFrames();
+    alert(`Velocidade do frame ${currentFrameIndex + 1} atualizada para ${customSpeed}ms`);
+  }
+};
+
+// Aplicar velocidade customizada a todos os frames
+document.getElementById('apply-all-speed').onclick = () => {
+  const customSpeed = parseInt(document.getElementById('custom-speed-input').value);
+  if (isNaN(customSpeed) || customSpeed < 50 || customSpeed > 2000) {
+    alert('Por favor, insira um valor entre 50 e 2000 ms');
+    return;
+  }
+  
+  frames.forEach(frame => {
+    frame.duration = customSpeed;
+  });
+  
+  renderFrames();
+  alert(`Velocidade de todos os frames atualizada para ${customSpeed}ms`);
+};
+
+// Event listeners for timeline controls
+document.getElementById('addFrame').onclick = addFrame;
+document.getElementById('duplicateFrame').onclick = duplicateFrame;
+document.getElementById('deleteFrame').onclick = deleteFrame;
+document.getElementById('previewAnimation').onclick = previewAnimation;
+document.getElementById('exportGIF').onclick = exportGIF;
+
+// Add initial frame
+addFrame();
   
   
 
 </script>
 </body>
 </html>
-
-
