@@ -81,7 +81,7 @@
       border-radius: 6px;
       cursor: pointer;
       display: flex;
-      flex-direction: column;
+      flex-direction:column;
       align-items: center;
       justify-content: center;
     }
@@ -1707,14 +1707,46 @@ renderAll(); undoStack.push(buffer.toDataURL()); updateUndoRedoButtons();
 updateCurrentGridSize(); // Atualizar tamanho do grid no modal
 updateCursor(); // Atualizar cursor inicial
 
+// ==============================================
+// CORREÇÃO DOS ATALHOS DE TECLADO
+// ==============================================
+
 // keyboard shortcuts: Z undo, X redo, E toggle eraser, B bucket, S selection
 window.addEventListener('keydown', (e)=>{
+  // Verificar se não está em um campo de entrada
+  const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT';
+  if (isInput) return;
+  
+  // Prevenir comportamento padrão para atalhos que usamos
+  if (e.key === 'z' || e.key === 'Z' || e.key === 'x' || e.key === 'X' || 
+      e.key === 'e' || e.key === 'E' || e.key === 'b' || e.key === 'B' || 
+      e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P' ||
+      e.key === 'Delete' || e.key === 'Backspace' || e.key === 'Escape') {
+    e.preventDefault();
+  }
+  
+  // Atalhos com Ctrl (ou Cmd no Mac)
   if(e.ctrlKey || e.metaKey) {
-    if(e.key === 'z' || e.key === 'Z') undo();
-    if(e.key === 'x' || e.key === 'X') redo();
-    if(e.key === 'c' || e.key === 'C') copySelection();
-    if(e.key === 'v' || e.key === 'V') pasteSelection();
+    if(e.key === 'z' || e.key === 'Z') {
+      undo();
+    }
+    if(e.key === 'x' || e.key === 'X') {
+      redo();
+    }
+    if(e.key === 'c' || e.key === 'C') {
+      copySelection();
+    }
+    if(e.key === 'v' || e.key === 'V') {
+      pasteSelection();
+    }
   } else {
+    // Atalhos sem Ctrl
+    if(e.key === 'z' || e.key === 'Z'){ 
+      undo();
+    }
+    if(e.key === 'x' || e.key === 'X'){ 
+      redo();
+    }
     if(e.key === 'e' || e.key === 'E'){ 
       currentColor = 'eraser'; 
       currentTool = 'eraser';
