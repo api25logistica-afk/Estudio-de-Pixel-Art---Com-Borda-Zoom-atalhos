@@ -1112,7 +1112,7 @@ artCanvas.addEventListener('touchend', (e)=>{
 });
 
 // ==============================================
-// TIMELINE FUNCTIONS
+// TIMELINE FUNCTIONS - CORRIGIDAS
 // ==============================================
 
 function saveCurrentFrame() {
@@ -1143,18 +1143,25 @@ function loadFrame(index) {
 function addFrame() {
   saveCurrentFrame();
   
+  // CRIAR FRAME EM BRANCO (não copia o conteúdo atual)
   const frameCanvas = document.createElement('canvas');
   frameCanvas.width = buffer.width;
   frameCanvas.height = buffer.height;
   const frameCtx = frameCanvas.getContext('2d');
-  frameCtx.drawImage(buffer, 0, 0);
   
+  // Limpar o canvas do novo frame (frame em branco)
+  frameCtx.clearRect(0, 0, frameCanvas.width, frameCanvas.height);
+  
+  // Adicionar o frame em branco
   frames.push({
     imageData: frameCanvas.toDataURL(),
     duration: 250 // ms
   });
   
   currentFrameIndex = frames.length - 1;
+  
+  // Carregar o novo frame em branco
+  loadFrame(currentFrameIndex);
   renderFrames();
   updateFrameDisplay();
 }
@@ -1164,6 +1171,7 @@ function duplicateFrame() {
   
   saveCurrentFrame();
   
+  // DUPLICAR realmente copia o frame atual
   const frameCanvas = document.createElement('canvas');
   frameCanvas.width = buffer.width;
   frameCanvas.height = buffer.height;
@@ -1176,6 +1184,7 @@ function duplicateFrame() {
   });
   
   currentFrameIndex++;
+  loadFrame(currentFrameIndex);
   renderFrames();
   updateFrameDisplay();
 }
@@ -1437,7 +1446,7 @@ document.getElementById('deleteFrame').onclick = deleteFrame;
 document.getElementById('previewAnimation').onclick = previewAnimation;
 document.getElementById('exportGIF').onclick = exportGIF;
 
-// Add initial frame
+// Add initial frame (frame em branco)
 addFrame();
   
   
