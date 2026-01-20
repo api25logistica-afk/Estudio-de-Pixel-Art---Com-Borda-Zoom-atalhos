@@ -207,7 +207,7 @@
     /* Layout principal reorganizado */
     .main-content {
       display: flex;
-      flex-direction: column;
+      flex-direction:column;
       align-items: center;
       gap: 20px;
     }
@@ -229,6 +229,86 @@
       flex-direction: column;
       width: 200px;
     }
+
+    /* Modal de importação */
+    .import-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .import-modal-content {
+      background: var(--panel);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      width: 400px;
+      max-width: 90%;
+    }
+
+    .import-options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .import-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--panel-2);
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .import-option:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .import-option input[type="radio"] {
+      margin: 0;
+    }
+
+    .import-controls {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .import-control-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .import-control-row label {
+      min-width: 150px;
+      color: var(--muted);
+    }
+
+    .import-control-row input[type="number"] {
+      width: 80px;
+      padding: 6px 10px;
+    }
+
+    .import-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -245,6 +325,7 @@
         <button id="newArt">Nova Arte</button>
         <button id="download">Baixar</button>
         <button id="downloadTransparent">PNG</button>
+        <button id="importBtn">Importar</button>
       </div>
     </div>
 
@@ -351,6 +432,48 @@
   </div>
 </div>
 
+<!-- Modal de importação -->
+<div id="importModal" class="import-modal">
+  <div class="import-modal-content">
+    <h3 style="margin:0 0 15px 0;">Importar Imagem</h3>
+    <div class="import-options">
+      <label class="import-option">
+        <input type="radio" name="importOption" value="fitToGrid" checked>
+        <span>Ajustar ao grid atual</span>
+      </label>
+      <label class="import-option">
+        <input type="radio" name="importOption" value="adaptGrid">
+        <span>Adaptar grid à imagem</span>
+      </label>
+    </div>
+    
+    <div class="import-controls" id="adaptiveControls" style="display:none;">
+      <div class="import-control-row">
+        <label>Colunas (largura):</label>
+        <input type="number" id="importCols" min="8" max="512" value="64">
+      </div>
+      <div class="import-control-row">
+        <label>Linhas (altura):</label>
+        <input type="number" id="importRows" min="8" max="512" value="64">
+      </div>
+      <div style="font-size:12px; color:var(--muted); margin-top:10px;">
+        Dica: Use valores altos para mais detalhes, valores baixos para pixel art mais estilizada.
+      </div>
+    </div>
+
+    <div class="import-controls" id="fitControls">
+      <div style="font-size:12px; color:var(--muted);">
+        A imagem será redimensionada para caber no grid atual de <span id="currentGridSize">64x64</span> pixels.
+      </div>
+    </div>
+
+    <div class="import-buttons">
+      <button id="cancelImport">Cancelar</button>
+      <button id="confirmImport">Importar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // accent color control
 const accentPicker = document.getElementById('accentPicker');
@@ -392,6 +515,11 @@ let frames = [];
 let currentFrameIndex = 0;
 let isPlaying = false;
 let playInterval = null;
+
+// VARIÁVEIS PARA IMPORTAR
+let importImageData = null;
+let importImageWidth = 0;
+let importImageHeight = 0;
 
 function pushUndo(){
   try{
@@ -519,6 +647,316 @@ document.getElementById('gridSize').onchange = (e)=>{
   renderAll();
 };
 
+// Modal de importação
+const importModal = document.getElementById('importModal');
+const importOptionRadios = document.querySelectorAll('input[name="importOption"]');
+const adaptiveControls = document.getElementById('adaptiveControls');
+const fitControls = document.getElementById('fitControls');
+const currentGridSizeSpan = document.getElementById('currentGridSize');
+const importColsInput = document.getElementById('importCols');
+const importRowsInput = document.getElementById('importRows');
+const cancelImportBtn = document.getElementById('cancelImport');
+const confirmImportBtn = document.getElementById('confirmImport');
+
+// Atualizar tamanho do grid atual
+function updateCurrentGridSize() {
+  currentGridSizeSpan.textContent = `${gridCols}x${gridRows}`;
+}
+
+// Mostrar/ocultar controles baseado na opção selecionada
+importOptionRadios.forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    if (e.target.value === 'adaptGrid') {
+      adaptiveControls.style.display = 'block';
+      fitControls.style.display = 'none';
+      
+      // Sugerir valores baseados na proporção da imagem
+      if (importImageWidth > 0 && importImageHeight > 0) {
+        const aspectRatio = importImageWidth / importImageHeight;
+        
+        // Calcular valores sugeridos mantendo a proporção
+        let suggestedCols = 64;
+        let suggestedRows = Math.round(suggestedCols / aspectRatio);
+        
+        // Garantir valores mínimos
+        if (suggestedRows < 8) {
+          suggestedRows = 8;
+          suggestedCols = Math.round(suggestedRows * aspectRatio);
+        }
+        
+        // Limitar valores máximos
+        suggestedCols = Math.min(512, Math.max(8, suggestedCols));
+        suggestedRows = Math.min(512, Math.max(8, suggestedRows));
+        
+        importColsInput.value = suggestedCols;
+        importRowsInput.value = suggestedRows;
+      }
+    } else {
+      adaptiveControls.style.display = 'none';
+      fitControls.style.display = 'block';
+    }
+  });
+});
+
+cancelImportBtn.onclick = () => {
+  importModal.style.display = 'none';
+  importImageData = null;
+};
+
+// Importar imagem
+document.getElementById('importBtn').onclick = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Salvar dados da imagem para usar no modal
+        importImageData = event.target.result;
+        importImageWidth = img.width;
+        importImageHeight = img.height;
+        
+        // Atualizar tamanho do grid atual no modal
+        updateCurrentGridSize();
+        
+        // Mostrar modal de importação
+        importModal.style.display = 'flex';
+        
+        // Resetar para opção padrão
+        document.querySelector('input[name="importOption"][value="fitToGrid"]').checked = true;
+        adaptiveControls.style.display = 'none';
+        fitControls.style.display = 'block';
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  input.click();
+};
+
+// Confirmar importação
+confirmImportBtn.onclick = () => {
+  if (!importImageData) return;
+  
+  const importOption = document.querySelector('input[name="importOption"]:checked').value;
+  
+  const img = new Image();
+  img.onload = () => {
+    // Salvar estado atual no undo
+    pushUndo();
+    
+    if (importOption === 'adaptGrid') {
+      // ADAPTAR GRID À IMAGEM
+      const newCols = parseInt(importColsInput.value);
+      const newRows = parseInt(importRowsInput.value);
+      
+      if (isNaN(newCols) || isNaN(newRows) || newCols < 8 || newCols > 512 || newRows < 8 || newRows > 512) {
+        alert('Por favor, insira valores válidos para colunas e linhas (8-512).');
+        return;
+      }
+      
+      // Atualizar tamanho do grid
+      gridCols = newCols;
+      gridRows = newRows;
+      
+      // Atualizar select do grid para refletir o novo tamanho
+      document.getElementById('gridSize').value = newCols === newRows ? newCols.toString() : 'custom';
+      
+      // Calcular novo tamanho do canvas mantendo proporção
+      const canvasSize = 640;
+      const aspectRatio = newCols / newRows;
+      
+      if (aspectRatio >= 1) {
+        artCanvas.width = canvasSize;
+        artCanvas.height = Math.round(canvasSize / aspectRatio);
+      } else {
+        artCanvas.height = canvasSize;
+        artCanvas.width = Math.round(canvasSize * aspectRatio);
+      }
+      
+      // Atualizar buffer
+      buffer.width = artCanvas.width;
+      buffer.height = artCanvas.height;
+      
+      // Limpar buffer
+      bctx.clearRect(0, 0, buffer.width, buffer.height);
+      
+      // Calcular escala para preencher o canvas
+      const scaleX = buffer.width / img.width;
+      const scaleY = buffer.height / img.height;
+      const scale = Math.max(scaleX, scaleY); // Preencher todo o canvas
+      
+      const newWidth = img.width * scale;
+      const newHeight = img.height * scale;
+      
+      // Centralizar a imagem no canvas
+      const offsetX = (buffer.width - newWidth) / 2;
+      const offsetY = (buffer.height - newHeight) / 2;
+      
+      // Desenhar imagem redimensionada
+      bctx.imageSmoothingEnabled = false;
+      bctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+      
+      // Aplicar pixelização baseada no novo grid
+      pixelateImageForGrid(newWidth, newHeight, offsetX, offsetY);
+      
+    } else {
+      // AJUSTAR AO GRID ATUAL
+      // Limpar buffer
+      bctx.clearRect(0, 0, buffer.width, buffer.height);
+      
+      // Calcular proporções para redimensionar imagem para o grid
+      const scaleX = buffer.width / img.width;
+      const scaleY = buffer.height / img.height;
+      const scale = Math.min(scaleX, scaleY); // Manter proporção
+      
+      const newWidth = img.width * scale;
+      const newHeight = img.height * scale;
+      
+      // Centralizar a imagem no canvas
+      const offsetX = (buffer.width - newWidth) / 2;
+      const offsetY = (buffer.height - newHeight) / 2;
+      
+      // Desenhar imagem redimensionada
+      bctx.imageSmoothingEnabled = false;
+      bctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+      
+      // Aplicar pixelização para melhorar a visualização pixel art
+      pixelateImage(newWidth, newHeight, offsetX, offsetY);
+    }
+    
+    // Atualizar display
+    renderAll();
+    
+    // Se estiver na timeline, atualizar o frame atual
+    if (frames.length > 0 && frames[currentFrameIndex]) {
+      const frameCanvas = document.createElement('canvas');
+      frameCanvas.width = buffer.width;
+      frameCanvas.height = buffer.height;
+      const frameCtx = frameCanvas.getContext('2d');
+      frameCtx.drawImage(buffer, 0, 0);
+      frames[currentFrameIndex].imageData = frameCanvas.toDataURL();
+      renderFrames();
+    }
+    
+    // Fechar modal
+    importModal.style.display = 'none';
+    importImageData = null;
+    
+    alert('Imagem importada com sucesso!');
+  };
+  img.src = importImageData;
+};
+
+// Função para pixelar a imagem importada (para ajustar ao grid atual)
+function pixelateImage(imgWidth, imgHeight, offsetX, offsetY) {
+  // Obter dados da imagem original
+  const imageData = bctx.getImageData(offsetX, offsetY, imgWidth, imgHeight);
+  const data = imageData.data;
+  
+  // Tamanho do "pixel" baseado no grid
+  const pixelSize = Math.max(1, Math.floor(imgWidth / gridCols));
+  
+  // Aplicar efeito de pixelização
+  for (let y = 0; y < imgHeight; y += pixelSize) {
+    for (let x = 0; x < imgWidth; x += pixelSize) {
+      // Pegar a cor do pixel central do bloco
+      const centerX = Math.min(x + Math.floor(pixelSize / 2), imgWidth - 1);
+      const centerY = Math.min(y + Math.floor(pixelSize / 2), imgHeight - 1);
+      const index = (centerY * imgWidth + centerX) * 4;
+      
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const a = data[index + 3];
+      
+      // Preencher o bloco inteiro com essa cor
+      for (let py = 0; py < pixelSize; py++) {
+        for (let px = 0; px < pixelSize; px++) {
+          const currentX = x + px;
+          const currentY = y + py;
+          
+          if (currentX < imgWidth && currentY < imgHeight) {
+            const currentIndex = (currentY * imgWidth + currentX) * 4;
+            data[currentIndex] = r;
+            data[currentIndex + 1] = g;
+            data[currentIndex + 2] = b;
+            data[currentIndex + 3] = a;
+          }
+        }
+      }
+    }
+  }
+  
+  // Colocar os dados pixelados de volta no buffer
+  bctx.putImageData(imageData, offsetX, offsetY);
+}
+
+// Função para pixelar imagem quando o grid é adaptado
+function pixelateImageForGrid(imgWidth, imgHeight, offsetX, offsetY) {
+  // Obter dados da imagem original
+  const imageData = bctx.getImageData(offsetX, offsetY, imgWidth, imgHeight);
+  const data = imageData.data;
+  
+  // Tamanho do pixel baseado no novo grid
+  const pixelWidth = imgWidth / gridCols;
+  const pixelHeight = imgHeight / gridRows;
+  
+  // Aplicar efeito de pixelização para o novo grid
+  for (let row = 0; row < gridRows; row++) {
+    for (let col = 0; col < gridCols; col++) {
+      // Calcular posição do pixel no grid
+      const xStart = Math.floor(col * pixelWidth);
+      const yStart = Math.floor(row * pixelHeight);
+      const xEnd = Math.floor((col + 1) * pixelWidth);
+      const yEnd = Math.floor((row + 1) * pixelHeight);
+      
+      // Calcular cor média da área
+      let r = 0, g = 0, b = 0, a = 0;
+      let count = 0;
+      
+      for (let y = yStart; y < yEnd && y < imgHeight; y++) {
+        for (let x = xStart; x < xEnd && x < imgWidth; x++) {
+          const index = (y * imgWidth + x) * 4;
+          r += data[index];
+          g += data[index + 1];
+          b += data[index + 2];
+          a += data[index + 3];
+          count++;
+        }
+      }
+      
+      if (count > 0) {
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+        a = Math.round(a / count);
+        
+        // Preencher toda a área com a cor média
+        for (let y = yStart; y < yEnd && y < imgHeight; y++) {
+          for (let x = xStart; x < xEnd && x < imgWidth; x++) {
+            const index = (y * imgWidth + x) * 4;
+            data[index] = r;
+            data[index + 1] = g;
+            data[index + 2] = b;
+            data[index + 3] = a;
+          }
+        }
+      }
+    }
+  }
+  
+  // Colocar os dados pixelados de volta no buffer
+  bctx.putImageData(imageData, offsetX, offsetY);
+}
+
 // download PNG com fundo (respeita opção de grid no download)
 document.getElementById('download').onclick = ()=>{
   const tmp = document.createElement('canvas');
@@ -638,6 +1076,7 @@ seeds.forEach(addColorToHistory);
 
 // initial
 renderAll(); undoStack.push(buffer.toDataURL()); updateUndoRedoButtons();
+updateCurrentGridSize(); // Atualizar tamanho do grid no modal
 
 // keyboard shortcuts: Z undo, X redo, E toggle eraser
 window.addEventListener('keydown', (e)=>{
