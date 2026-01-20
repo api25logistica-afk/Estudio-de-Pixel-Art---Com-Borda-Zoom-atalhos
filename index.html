@@ -15,6 +15,7 @@
       --accent-hover:#7c3aed;
       --danger:#ef4444;
       --grid:#374151;
+      --selection:#3b82f6;
     }
     body{ margin:0; background:var(--bg); color:var(--text); font-family:Arial, Helvetica, sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
     h1,h3,h4{ color:var(--text); }
@@ -22,13 +23,14 @@
     .toolbox-group{ display:flex; flex-direction:column; gap:8px; background:var(--panel-2); padding:10px; border-radius:10px; box-shadow: inset 0 0 0 1px var(--border); }
     .toolbox-group h4{ margin:0 0 6px 0; font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--muted); }
     .toolbox-row{ display:flex; gap:6px; flex-wrap:wrap; }
+    .toolbox-subrow{ display:flex; flex-direction:column; gap:6px; width:100%; }
     button, select, input{ padding:6px 10px; font-size:14px; border-radius:8px; border:1px solid var(--border); background:#0b1220; color:var(--text); cursor:pointer; }
     button:hover, select:hover, input:hover{ background:#111827; }
     button.activeTool{ background:var(--accent); border-color:var(--accent); color:white; }
     select option{ background:#0b1220; color:var(--text); }
     .color-btn{ width:28px; height:28px; border:1px solid #000; cursor:pointer; box-sizing:border-box; display:inline-block; border-radius:6px; }
     .color-btn.selected{ outline:3px solid var(--accent); }
-    #grid{ background:white; border-radius:12px; image-rendering:pixelated; cursor:crosshair; touch-action:none; width:640px; height:640px; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+    #grid{ background:white; border-radius:12px; image-rendering:pixelated; cursor:crosshair; touch-action:none; width:640px; height:640px; box-shadow:0 10px 30px rgba(0,0,0,.45); position:relative; }
     #colorHistory{ display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; max-width:320px; max-height:300px; overflow:auto; padding:8px; background:transparent; }
     #colorHistory::-webkit-scrollbar{ height:1000px; width:20px; }
     #colorHistory::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
@@ -309,6 +311,57 @@
       gap: 10px;
       margin-top: 20px;
     }
+
+    /* Selection overlay */
+    #selection-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 10;
+      border: 2px dashed var(--selection);
+      background-color: rgba(59, 130, 246, 0.1);
+      display: none;
+    }
+
+    /* Selection controls */
+    .selection-controls {
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 5px;
+      background: var(--panel);
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      display: none;
+      z-index: 20;
+    }
+
+    .selection-btn {
+      width: 30px;
+      height: 30px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .selection-btn:hover {
+      background: var(--accent);
+    }
+
+    /* Tool cursors */
+    .cursor-crosshair { cursor: crosshair; }
+    .cursor-selection { cursor: move; }
+    .cursor-bucket { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23000000" d="M19 10c0-1.1-.9-2-2-2h-2V7c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2v1H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-8zm-2 0h-2v1h2v-1zm-4 0h-2v1h2v-1zm-4 0H7v1h2v-1z"/></svg>') 0 24, auto; }
   </style>
 </head>
 <body>
@@ -321,51 +374,65 @@
 
     <div class="toolbox-group">
       <h4>Arquivo</h4>
-      <div class="toolbox-row">
-        <button id="newArt">Nova Arte</button>
-        <button id="download">Baixar</button>
-        <button id="downloadTransparent">PNG</button>
-        <button id="importBtn">Importar</button>
+      <div class="toolbox-subrow">
+        <div class="toolbox-row">
+          <button id="newArt">Nova Arte</button>
+          <button id="download">Baixar</button>
+          <button id="downloadTransparent">PNG</button>
+        </div>
+        <div class="toolbox-row">
+          <button id="importBtn">Importar</button>
+        </div>
       </div>
     </div>
 
     <div class="toolbox-group">
       <h4>Editar</h4>
-      <div class="toolbox-row">
-        <button id="undoBtn">Desfazer</button>
-        <button id="redoBtn">Refazer</button>
-        <button id="eraser">Borracha</button>
+      <div class="toolbox-subrow">
+        <div class="toolbox-row">
+          <button id="undoBtn">Desfazer</button>
+          <button id="redoBtn">Refazer</button>
+          <button id="eraser">Borracha</button>
+        </div>
+        <div class="toolbox-row">
+          <button id="bucketTool" class="activeTool">Balde</button>
+          <button id="selectionTool">Seleção</button>
+        </div>
       </div>
     </div>
 
     <div class="toolbox-group">
       <h4>Grid</h4>
-      <div class="toolbox-row">
-        <button id="toggleGrid" class="activeTool">Grid ON</button>
-        <button id="toggleExportGrid" class="activeTool">Grid no Download</button>
-      </div>
-      <div class="toolbox-row">
-        <label for="gridSize">Tamanho</label>
-        <select id="gridSize">
-          <option value="16" >16 x 16</option>
-          <option value="32">32 x 32</option>
-          <option value="64" selected>64 x 64</option>
-          <option value="128">128 x 128</option>
-          <option value="256">256 x 256</option>
-        </select>
-        <button id="createGrid">Criar Grid</button>
+      <div class="toolbox-subrow">
+        <div class="toolbox-row">
+          <button id="toggleGrid" class="activeTool">Grid ON</button>
+          <button id="toggleExportGrid" class="activeTool">Grid no Download</button>
+        </div>
+        <div class="toolbox-row">
+          <label for="gridSize">Tamanho</label>
+          <select id="gridSize">
+            <option value="16" >16 x 16</option>
+            <option value="32">32 x 32</option>
+            <option value="64" selected>64 x 64</option>
+            <option value="128">128 x 128</option>
+            <option value="256">256 x 256</option>
+          </select>
+          <button id="createGrid">Criar Grid</button>
+        </div>
       </div>
     </div>
 
     <div class="toolbox-group">
       <h4>Cores</h4>
-      <div class="toolbox-row">
-        <input type="text" id="customColor" placeholder="#hex" />
-        <button id="addColor">Criar Cor</button>
-      </div>
-      <div class="toolbox-row">
-        <label style="font-size:12px;color:var(--muted)">Accent</label>
-        <input type="color" id="accentPicker" value="#8b5cf6" />
+      <div class="toolbox-subrow">
+        <div class="toolbox-row">
+          <input type="text" id="customColor" placeholder="#hex" />
+          <button id="addColor">Criar Cor</button>
+        </div>
+        <div class="toolbox-row">
+          <label style="font-size:12px;color:var(--muted)">Accent</label>
+          <input type="color" id="accentPicker" value="#8b5cf6" />
+        </div>
       </div>
     </div>
 
@@ -374,9 +441,17 @@
   <!-- SEÇÃO DO CANVAS E FERRAMENTAS -->
   <div class="canvas-section">
     <div class="canvas-with-tools">
-      <!-- CANVAS -->
-      <div>
+      <!-- CANVAS COM OVERLAY DE SELEÇÃO -->
+      <div style="position:relative;">
         <canvas id="grid" width="640" height="640"></canvas>
+        <div id="selection-overlay"></div>
+        <div id="selection-controls" class="selection-controls">
+          <button class="selection-btn" id="cutSelection" title="Recortar">✂️</button>
+          <button class="selection-btn" id="copySelection" title="Copiar">📋</button>
+          <button class="selection-btn" id="pasteSelection" title="Colar">📌</button>
+          <button class="selection-btn" id="deleteSelection" title="Deletar">🗑️</button>
+          <button class="selection-btn" id="cancelSelection" title="Cancelar">✕</button>
+        </div>
       </div>
 
       <!-- HISTÓRICO DE CORES (LATERAL DO GRID) -->
@@ -521,6 +596,20 @@ let importImageData = null;
 let importImageWidth = 0;
 let importImageHeight = 0;
 
+// NOVAS VARIÁVEIS PARA FERRAMENTAS
+let currentTool = 'pencil'; // 'pencil', 'eraser', 'bucket', 'selection'
+let isSelecting = false;
+let selectionStart = { x: 0, y: 0 };
+let selectionEnd = { x: 0, y: 0 };
+let selection = null; // { x, y, width, height, data }
+let isMovingSelection = false;
+let selectionOffset = { x: 0, y: 0 };
+let clipboard = null; // Para copiar/colar
+
+// Elementos da seleção
+const selectionOverlay = document.getElementById('selection-overlay');
+const selectionControls = document.getElementById('selection-controls');
+
 function pushUndo(){
   try{
     undoStack.push(buffer.toDataURL());
@@ -584,11 +673,22 @@ function renderAll(){
   if(showGrid){
     drawGridOnContext(ctx);
   }
+  
+  // Desenhar seleção se existir
+  if (selection) {
+    drawSelection();
+  }
 }
 
 function resizeBufferToCanvas(){ buffer.width = artCanvas.width; buffer.height = artCanvas.height; }
 
+// ==============================================
+// FERRAMENTA DE PINCEL/BORRACHA (modificada)
+// ==============================================
+
 function paintCellAt(xPixel, yPixel){
+  if (currentTool === 'selection') return;
+  
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
 
@@ -603,14 +703,416 @@ function paintCellAt(xPixel, yPixel){
 
   bctx.imageSmoothingEnabled = false;
 
-  if(currentColor === 'eraser'){
+  if(currentColor === 'eraser' || currentTool === 'eraser'){
     // apaga de verdade (transparência real para PNG)
     bctx.clearRect(px, py, w, h);
-  } else {
+  } else if (currentTool === 'pencil') {
     bctx.fillStyle = currentColor;
     bctx.fillRect(px, py, w, h);
   }
+  
+  // Limpar seleção se estiver pintando
+  if (selection && (currentTool === 'pencil' || currentTool === 'eraser')) {
+    clearSelection();
+  }
 
+  renderAll();
+}
+
+// ==============================================
+// FERRAMENTA DE BALDE (BUCKET FILL)
+// ==============================================
+
+function bucketFill(xPixel, yPixel){
+  pushUndo();
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+
+  const x = Math.floor(xPixel / stepX);
+  const y = Math.floor(yPixel / stepY);
+  
+  if(x < 0 || y < 0 || x >= gridCols || y >= gridRows) return;
+  
+  // Obter a cor do pixel clicado
+  const px = Math.round(x * stepX);
+  const py = Math.round(y * stepY);
+  const pixelData = bctx.getImageData(px, py, 1, 1).data;
+  const targetColor = `rgba(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]}, ${pixelData[3]/255})`;
+  
+  // Se a cor alvo for igual à cor atual, não fazer nada
+  if (currentColor === 'eraser') {
+    // Para preenchimento com "transparência"
+    floodFill(x, y, targetColor, 'transparent');
+  } else {
+    // Converter cor atual para rgba para comparação
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.fillStyle = currentColor;
+    tempCtx.fillRect(0, 0, 1, 1);
+    const currentPixelData = tempCtx.getImageData(0, 0, 1, 1).data;
+    const newColor = `rgba(${currentPixelData[0]}, ${currentPixelData[1]}, ${currentPixelData[2]}, ${currentPixelData[3]/255})`;
+    
+    if (targetColor !== newColor) {
+      floodFill(x, y, targetColor, newColor);
+    }
+  }
+  
+  renderAll();
+}
+
+// Algoritmo de flood fill (preenchimento)
+function floodFill(startX, startY, targetColor, newColor){
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  // Criar array de visitados
+  const visited = new Array(gridCols * gridRows).fill(false);
+  const stack = [{x: startX, y: startY}];
+  
+  while(stack.length > 0){
+    const {x, y} = stack.pop();
+    const index = y * gridCols + x;
+    
+    if(x < 0 || x >= gridCols || y < 0 || y >= gridRows) continue;
+    if(visited[index]) continue;
+    
+    const px = Math.round(x * stepX);
+    const py = Math.round(y * stepY);
+    const pixelData = bctx.getImageData(px, py, 1, 1).data;
+    const currentColor = `rgba(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]}, ${pixelData[3]/255})`;
+    
+    // Comparar cores (com tolerância para alpha)
+    if(currentColor === targetColor){
+      visited[index] = true;
+      
+      // Pintar o pixel
+      if(newColor === 'transparent'){
+        bctx.clearRect(px, py, stepX, stepY);
+      } else {
+        bctx.fillStyle = newColor;
+        bctx.fillRect(px, py, stepX, stepY);
+      }
+      
+      // Adicionar vizinhos
+      stack.push({x: x+1, y});
+      stack.push({x: x-1, y});
+      stack.push({x, y: y+1});
+      stack.push({x, y: y-1});
+    }
+  }
+}
+
+// ==============================================
+// FERRAMENTA DE SELEÇÃO
+// ==============================================
+
+function startSelection(xPixel, yPixel){
+  isSelecting = true;
+  selectionStart = { x: xPixel, y: yPixel };
+  selectionEnd = { x: xPixel, y: yPixel };
+  updateSelectionOverlay();
+}
+
+function updateSelection(xPixel, yPixel){
+  if (!isSelecting) return;
+  selectionEnd = { x: xPixel, y: yPixel };
+  updateSelectionOverlay();
+}
+
+function endSelection(){
+  if (!isSelecting) return;
+  isSelecting = false;
+  
+  // Garantir que a seleção tenha pelo menos 1 pixel
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const startCellX = Math.floor(selectionStart.x / stepX);
+  const startCellY = Math.floor(selectionStart.y / stepY);
+  const endCellX = Math.floor(selectionEnd.x / stepX);
+  const endCellY = Math.floor(selectionEnd.y / stepY);
+  
+  const minX = Math.max(0, Math.min(startCellX, endCellX));
+  const minY = Math.max(0, Math.min(startCellY, endCellY));
+  const maxX = Math.min(gridCols-1, Math.max(startCellX, endCellX));
+  const maxY = Math.min(gridRows-1, Math.max(startCellY, endCellY));
+  
+  const width = maxX - minX + 1;
+  const height = maxY - minY + 1;
+  
+  if (width > 0 && height > 0) {
+    // Criar seleção
+    selection = {
+      x: minX,
+      y: minY,
+      width: width,
+      height: height,
+      data: null
+    };
+    
+    // Capturar dados da seleção
+    captureSelectionData();
+    showSelectionControls();
+  } else {
+    clearSelection();
+  }
+}
+
+function captureSelectionData(){
+  if (!selection) return;
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const pw = Math.round(selection.width * stepX);
+  const ph = Math.round(selection.height * stepY);
+  
+  selection.data = bctx.getImageData(px, py, pw, ph);
+}
+
+function drawSelection(){
+  if (!selection) return;
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const pw = Math.round(selection.width * stepX);
+  const ph = Math.round(selection.height * stepY);
+  
+  // Desenhar overlay da seleção
+  ctx.save();
+  ctx.strokeStyle = 'var(--selection)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 5]);
+  ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
+  
+  // Desenhar cantos
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'var(--selection)';
+  const cornerSize = 6;
+  
+  // Cantos
+  ctx.fillRect(px - cornerSize/2, py - cornerSize/2, cornerSize, cornerSize);
+  ctx.fillRect(px + pw - cornerSize/2, py - cornerSize/2, cornerSize, cornerSize);
+  ctx.fillRect(px - cornerSize/2, py + ph - cornerSize/2, cornerSize, cornerSize);
+  ctx.fillRect(px + pw - cornerSize/2, py + ph - cornerSize/2, cornerSize, cornerSize);
+  
+  ctx.restore();
+}
+
+function updateSelectionOverlay(){
+  if (!isSelecting && !selection) {
+    selectionOverlay.style.display = 'none';
+    return;
+  }
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  let px, py, pw, ph;
+  
+  if (isSelecting) {
+    const startCellX = Math.floor(selectionStart.x / stepX);
+    const startCellY = Math.floor(selectionStart.y / stepY);
+    const endCellX = Math.floor(selectionEnd.x / stepX);
+    const endCellY = Math.floor(selectionEnd.y / stepY);
+    
+    const minX = Math.max(0, Math.min(startCellX, endCellX));
+    const minY = Math.max(0, Math.min(startCellY, endCellY));
+    const maxX = Math.min(gridCols-1, Math.max(startCellX, endCellX));
+    const maxY = Math.min(gridRows-1, Math.max(startCellY, endCellY));
+    
+    px = Math.round(minX * stepX);
+    py = Math.round(minY * stepY);
+    pw = Math.round((maxX - minX + 1) * stepX);
+    ph = Math.round((maxY - minY + 1) * stepY);
+  } else if (selection) {
+    px = Math.round(selection.x * stepX);
+    py = Math.round(selection.y * stepY);
+    pw = Math.round(selection.width * stepX);
+    ph = Math.round(selection.height * stepY);
+  }
+  
+  if (pw > 0 && ph > 0) {
+    selectionOverlay.style.left = px + 'px';
+    selectionOverlay.style.top = py + 'px';
+    selectionOverlay.style.width = pw + 'px';
+    selectionOverlay.style.height = ph + 'px';
+    selectionOverlay.style.display = 'block';
+  }
+}
+
+function showSelectionControls(){
+  if (!selection) return;
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const ph = Math.round(selection.height * stepY);
+  
+  selectionControls.style.left = (px + (selection.width * stepX) / 2) + 'px';
+  selectionControls.style.top = (py - 40) + 'px';
+  selectionControls.style.display = 'flex';
+}
+
+function clearSelection(){
+  selection = null;
+  selectionOverlay.style.display = 'none';
+  selectionControls.style.display = 'none';
+  isMovingSelection = false;
+  renderAll();
+}
+
+function cutSelection(){
+  if (!selection) return;
+  pushUndo();
+  
+  copySelection();
+  
+  // Apagar área selecionada
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const pw = Math.round(selection.width * stepX);
+  const ph = Math.round(selection.height * stepY);
+  
+  bctx.clearRect(px, py, pw, ph);
+  
+  clearSelection();
+  renderAll();
+}
+
+function copySelection(){
+  if (!selection) return;
+  clipboard = {
+    data: selection.data,
+    width: selection.width,
+    height: selection.height
+  };
+}
+
+function pasteSelection(){
+  if (!clipboard) return;
+  pushUndo();
+  
+  // Posicionar no centro do canvas
+  const centerX = Math.floor(gridCols / 2 - clipboard.width / 2);
+  const centerY = Math.floor(gridRows / 2 - clipboard.height / 2);
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(centerX * stepX);
+  const py = Math.round(centerY * stepY);
+  
+  // Limpar seleção anterior
+  clearSelection();
+  
+  // Criar nova seleção
+  selection = {
+    x: centerX,
+    y: centerY,
+    width: clipboard.width,
+    height: clipboard.height,
+    data: clipboard.data
+  };
+  
+  // Colar dados
+  bctx.putImageData(clipboard.data, px, py);
+  
+  showSelectionControls();
+  renderAll();
+}
+
+function deleteSelection(){
+  if (!selection) return;
+  pushUndo();
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const pw = Math.round(selection.width * stepX);
+  const ph = Math.round(selection.height * stepY);
+  
+  bctx.clearRect(px, py, pw, ph);
+  
+  clearSelection();
+  renderAll();
+}
+
+function startMovingSelection(xPixel, yPixel){
+  if (!selection) return;
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const px = Math.round(selection.x * stepX);
+  const py = Math.round(selection.y * stepY);
+  const pw = Math.round(selection.width * stepX);
+  const ph = Math.round(selection.height * stepY);
+  
+  // Verificar se o clique está dentro da seleção
+  if (xPixel >= px && xPixel <= px + pw && yPixel >= py && yPixel <= py + ph) {
+    isMovingSelection = true;
+    selectionOffset = {
+      x: xPixel - px,
+      y: yPixel - py
+    };
+  }
+}
+
+function moveSelection(xPixel, yPixel){
+  if (!isMovingSelection || !selection) return;
+  
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  // Calcular nova posição em células
+  const newX = Math.floor((xPixel - selectionOffset.x) / stepX);
+  const newY = Math.floor((yPixel - selectionOffset.y) / stepY);
+  
+  // Limitar aos limites do canvas
+  selection.x = Math.max(0, Math.min(newX, gridCols - selection.width));
+  selection.y = Math.max(0, Math.min(newY, gridRows - selection.height));
+  
+  updateSelectionOverlay();
+  showSelectionControls();
+}
+
+function endMovingSelection(){
+  if (!isMovingSelection || !selection) return;
+  
+  isMovingSelection = false;
+  pushUndo();
+  
+  // Recriar a imagem na nova posição
+  const stepX = artCanvas.width / gridCols;
+  const stepY = artCanvas.height / gridRows;
+  
+  const oldPx = Math.round(selection.x * stepX);
+  const oldPy = Math.round(selection.y * stepY);
+  
+  // Limpar área original temporariamente
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = selection.data.width;
+  tempCanvas.height = selection.data.height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.putImageData(selection.data, 0, 0);
+  
+  // Redesenhar a seleção na nova posição
+  bctx.drawImage(tempCanvas, oldPx, oldPy);
+  
   renderAll();
 }
 
@@ -625,26 +1127,153 @@ function getPointerPos(evt){
   return { x: xCss * scaleX, y: yCss * scaleY };
 }
 
-// events
+// ==============================================
+// EVENT HANDLERS MODIFICADOS
+// ==============================================
+
 artCanvas.addEventListener('pointerdown', (e)=>{
   // left button only (button === 0)
   if(e.button !== undefined && e.button !== 0) return;
-  pushUndo(); // save state before edit
-  isDrawing = true;
+  
   const pos = getPointerPos(e);
-  paintCellAt(pos.x, pos.y);
+  
+  if (currentTool === 'selection') {
+    if (selection && !isMovingSelection) {
+      // Verificar se está clicando na seleção para movê-la
+      startMovingSelection(pos.x, pos.y);
+    } else {
+      // Começar nova seleção
+      pushUndo(); // save state before edit
+      startSelection(pos.x, pos.y);
+    }
+  } else if (currentTool === 'bucket') {
+    pushUndo(); // save state before edit
+    bucketFill(pos.x, pos.y);
+  } else {
+    pushUndo(); // save state before edit
+    isDrawing = true;
+    paintCellAt(pos.x, pos.y);
+  }
+  
   e.preventDefault();
 });
-window.addEventListener('pointerup', ()=>{ isDrawing = false; });
-artCanvas.addEventListener('pointermove', (e)=>{ if(!isDrawing) return; const pos = getPointerPos(e); paintCellAt(pos.x, pos.y); e.preventDefault(); });
+
+window.addEventListener('pointerup', ()=>{
+  if (isSelecting) {
+    endSelection();
+  }
+  if (isMovingSelection) {
+    endMovingSelection();
+  }
+  isDrawing = false;
+});
+
+artCanvas.addEventListener('pointermove', (e)=>{
+  const pos = getPointerPos(e);
+  
+  if (isSelecting) {
+    updateSelection(pos.x, pos.y);
+  } else if (isMovingSelection) {
+    moveSelection(pos.x, pos.y);
+  } else if (isDrawing && (currentTool === 'pencil' || currentTool === 'eraser')) {
+    paintCellAt(pos.x, pos.y);
+  }
+  
+  e.preventDefault();
+});
+
+// Atualizar cursor baseado na ferramenta
+function updateCursor(){
+  switch(currentTool){
+    case 'pencil':
+    case 'eraser':
+      artCanvas.className = 'cursor-crosshair';
+      break;
+    case 'selection':
+      artCanvas.className = 'cursor-selection';
+      break;
+    case 'bucket':
+      artCanvas.className = 'cursor-bucket';
+      break;
+  }
+}
+
+// ==============================================
+// TOOL CONTROLS
+// ==============================================
+
+// Ferramenta Balde
+const bucketToolBtn = document.getElementById('bucketTool');
+bucketToolBtn.onclick = () => {
+  currentTool = 'bucket';
+  updateToolButtons();
+  updateCursor();
+  clearSelection();
+};
+
+// Ferramenta Seleção
+const selectionToolBtn = document.getElementById('selectionTool');
+selectionToolBtn.onclick = () => {
+  currentTool = 'selection';
+  updateToolButtons();
+  updateCursor();
+};
+
+// Ferramenta Borracha (já existente)
+const eraserBtn = document.getElementById('eraser');
+eraserBtn.onclick = () => {
+  if (currentColor === 'eraser') {
+    currentColor = '#000000';
+    currentTool = 'pencil';
+  } else {
+    currentColor = 'eraser';
+    currentTool = 'eraser';
+  }
+  updateToolButtons();
+  updateCursor();
+  clearSelection();
+};
+
+// Atualizar botões de ferramentas
+function updateToolButtons(){
+  // Remover activeTool de todos os botões de ferramenta
+  document.querySelectorAll('#toolbar button').forEach(btn => {
+    if (btn.id === 'bucketTool' || btn.id === 'selectionTool' || btn.id === 'eraser') {
+      btn.classList.remove('activeTool');
+    }
+  });
+  
+  // Adicionar activeTool ao botão correto
+  if (currentTool === 'bucket') {
+    bucketToolBtn.classList.add('activeTool');
+  } else if (currentTool === 'selection') {
+    selectionToolBtn.classList.add('activeTool');
+  } else if (currentTool === 'eraser') {
+    eraserBtn.classList.add('activeTool');
+  } else if (currentTool === 'pencil') {
+    // O pincel é o padrão, nenhum botão específico
+  }
+}
+
+// Controles da seleção
+document.getElementById('cutSelection').onclick = cutSelection;
+document.getElementById('copySelection').onclick = copySelection;
+document.getElementById('pasteSelection').onclick = pasteSelection;
+document.getElementById('deleteSelection').onclick = deleteSelection;
+document.getElementById('cancelSelection').onclick = clearSelection;
+
+// ==============================================
+// RESTANTE DO CÓDIGO (mantido igual)
+// ==============================================
 
 // toolbar actions
-document.getElementById('newArt').onclick = ()=>{ pushUndo(); bctx.clearRect(0,0,buffer.width,buffer.height); renderAll(); };
+document.getElementById('newArt').onclick = ()=>{ pushUndo(); bctx.clearRect(0,0,buffer.width,buffer.height); renderAll(); clearSelection(); };
 document.getElementById('gridSize').onchange = (e)=>{
   const v = parseInt(e.target.value,10)||64;
   gridCols = v;
   gridRows = v;
   renderAll();
+  clearSelection();
 };
 
 // Modal de importação
@@ -1006,10 +1635,6 @@ document.getElementById('downloadTransparent').onclick = ()=>{
   link.click();
 };
 
-// eraser button toggle
-const eraserBtn = document.getElementById('eraser');
-eraserBtn.onclick = ()=>{ currentColor = (currentColor === 'eraser') ? '#000000' : 'eraser'; eraserBtn.classList.toggle('activeTool', currentColor === 'eraser'); };
-
 // grid toggle (visualização)
 const toggleGridBtn = document.getElementById('toggleGrid');
 toggleGridBtn.onclick = ()=>{
@@ -1034,12 +1659,14 @@ document.getElementById('redoBtn').onclick = redo;
 // color history
 function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) return; if(!colorHistory.includes(hex)){ colorHistory.push(hex); const div = document.getElementById('colorHistory'); const btn = document.createElement('div'); btn.className='color-btn'; btn.style.background=hex; btn.title=hex; btn.onclick = ()=>{
         currentColor = hex;
-        eraserBtn.classList.remove('activeTool');
+        currentTool = 'pencil';
+        updateToolButtons();
+        updateCursor();
         document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected'));
         btn.classList.add('selected');
       }; div.appendChild(btn); } }
 
-document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; eraserBtn.classList.remove('activeTool'); document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected')); const last = document.querySelector('#colorHistory .color-btn:last-child'); if(last) last.classList.add('selected'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
+document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; currentTool = 'pencil'; updateToolButtons(); updateCursor(); eraserBtn.classList.remove('activeTool'); document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected')); const last = document.querySelector('#colorHistory .color-btn:last-child'); if(last) last.classList.add('selected'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
 
 // create custom grid
 document.getElementById('createGrid').onclick = ()=>{
@@ -1056,6 +1683,7 @@ document.getElementById('createGrid').onclick = ()=>{
   buffer.height = artCanvas.height;
 
   renderAll();
+  clearSelection();
 };
 
 // seed colors
@@ -1077,12 +1705,47 @@ seeds.forEach(addColorToHistory);
 // initial
 renderAll(); undoStack.push(buffer.toDataURL()); updateUndoRedoButtons();
 updateCurrentGridSize(); // Atualizar tamanho do grid no modal
+updateCursor(); // Atualizar cursor inicial
 
-// keyboard shortcuts: Z undo, X redo, E toggle eraser
+// keyboard shortcuts: Z undo, X redo, E toggle eraser, B bucket, S selection
 window.addEventListener('keydown', (e)=>{
-  if(e.key === 'z' || e.key === 'Z') undo();
-  if(e.key === 'x' || e.key === 'X') redo();
-  if(e.key === 'e' || e.key === 'E'){ currentColor = 'eraser'; document.getElementById('eraser').classList.add('activeTool'); }
+  if(e.ctrlKey || e.metaKey) {
+    if(e.key === 'z' || e.key === 'Z') undo();
+    if(e.key === 'x' || e.key === 'X') redo();
+    if(e.key === 'c' || e.key === 'C') copySelection();
+    if(e.key === 'v' || e.key === 'V') pasteSelection();
+  } else {
+    if(e.key === 'e' || e.key === 'E'){ 
+      currentColor = 'eraser'; 
+      currentTool = 'eraser';
+      updateToolButtons();
+      updateCursor();
+      clearSelection();
+    }
+    if(e.key === 'b' || e.key === 'B'){ 
+      currentTool = 'bucket';
+      updateToolButtons();
+      updateCursor();
+      clearSelection();
+    }
+    if(e.key === 's' || e.key === 'S'){ 
+      currentTool = 'selection';
+      updateToolButtons();
+      updateCursor();
+    }
+    if(e.key === 'p' || e.key === 'P'){ 
+      currentTool = 'pencil';
+      updateToolButtons();
+      updateCursor();
+      clearSelection();
+    }
+    if(e.key === 'Delete' || e.key === 'Backspace') {
+      deleteSelection();
+    }
+    if(e.key === 'Escape') {
+      clearSelection();
+    }
+  }
 });
 
 // right-click paints with eraser (single cell)
@@ -1091,9 +1754,14 @@ artCanvas.addEventListener('contextmenu', (e)=>{
   const pos = getPointerPos(e);
   pushUndo();
   const old = currentColor;
+  const oldTool = currentTool;
   currentColor = 'eraser';
+  currentTool = 'eraser';
   paintCellAt(pos.x, pos.y);
   currentColor = old;
+  currentTool = oldTool;
+  updateToolButtons();
+  updateCursor();
 });
 
 // zoom: dblclick (PC) and double-tap (mobile) — mobile requires taps near same spot
@@ -1133,6 +1801,7 @@ function loadFrame(index) {
       bctx.clearRect(0, 0, buffer.width, buffer.height);
       bctx.drawImage(img, 0, 0);
       renderAll();
+      clearSelection();
     };
     img.src = frames[index].imageData;
     currentFrameIndex = index;
