@@ -411,10 +411,15 @@
         <div class="toolbox-row">
           <label for="gridSize">Tamanho</label>
           <select id="gridSize">
-            <option value="16" >16 x 16</option>
+            <option value="16">16 x 16</option>
             <option value="32">32 x 32</option>
+            <option value="48">48 x 48</option>
             <option value="64" selected>64 x 64</option>
+            <option value="80">80 x 80</option>
+            <option value="96">96 x 96</option>
+            <option value="112">112 x 112</option>
             <option value="128">128 x 128</option>
+            <option value="144">144 x 144</option>
             <option value="256">256 x 256</option>
           </select>
           <button id="createGrid">Criar Grid</button>
@@ -555,7 +560,6 @@ const accentPicker = document.getElementById('accentPicker');
 accentPicker.addEventListener('input', (e)=>{
   const color = e.target.value;
   document.documentElement.style.setProperty('--accent', color);
-  // darker hover automatically
   document.documentElement.style.setProperty('--accent-hover', color);
 });
 
@@ -567,19 +571,51 @@ ctx.imageSmoothingEnabled = false;
 // offscreen buffer that stores pixel artwork (without grid)
 const buffer = document.createElement('canvas');
 const bctx = buffer.getContext('2d');
-buffer.width = artCanvas.width;
-buffer.height = artCanvas.height;
+
+// ==============================================
+// FUNÇÕES CORRIGIDAS PARA RESOLVER BUG DO GRID
+// ==============================================
+
+// Função para garantir que o canvas tenha dimensões múltiplas do grid
+function updateCanvasSizeForGrid(cols, rows) {
+  // Calcular tamanho máximo mantendo proporção quadrada ou retangular
+  const maxSize = 640;
+  let cellSize;
+  
+  if (cols >= rows) {
+    cellSize = Math.floor(maxSize / cols);
+  } else {
+    cellSize = Math.floor(maxSize / rows);
+  }
+  
+  // Garantir tamanho mínimo de célula
+  cellSize = Math.max(1, cellSize);
+  
+  const width = cellSize * cols;
+  const height = cellSize * rows;
+  
+  artCanvas.width = width;
+  artCanvas.height = height;
+  buffer.width = width;
+  buffer.height = height;
+  
+  // Manter tamanho visual de 640px
+  artCanvas.style.width = '640px';
+  artCanvas.style.height = '640px';
+  
+  // Limpar e renderizar
+  bctx.clearRect(0, 0, buffer.width, buffer.height);
+  renderAll();
+}
 
 // state
-let size = 64; // backward compatibility (square)
 let gridCols = 64;
 let gridRows = 64;
-let cell = artCanvas.width / size;
 let currentColor = '#000000';
 let colorHistory = [];
 let isDrawing = false;
-let showGrid = true; // grid de visualização
-let includeGridOnExport = true; // grid no download
+let showGrid = true;
+let includeGridOnExport = true;
 
 // undo/redo (store buffer dataURLs)
 const undoStack = [];
@@ -636,7 +672,6 @@ function updateUndoRedoButtons(){ document.getElementById('undoBtn').disabled = 
 
 // draw grid path once per render to avoid double-stroke at intersections
 function drawGridOnContext(targetCtx){
-  const path = new Path2D();
   const cw = targetCtx === ctx ? artCanvas.width : buffer.width;
   const ch = targetCtx === ctx ? artCanvas.height : buffer.height;
 
@@ -646,23 +681,25 @@ function drawGridOnContext(targetCtx){
   targetCtx.lineWidth = 0.7; // grid mais visível
   targetCtx.strokeStyle = '#8a8a8a';
 
+  const path = new Path2D();
+
   // linhas verticais
   for(let i = 0; i <= gridCols; i++){
-    const x = Math.round(i * stepX) + 0.5;
+    const x = Math.floor(i * stepX) + 0.5;
     path.moveTo(x, 0);
     path.lineTo(x, ch);
   }
 
   // linhas horizontais
   for(let j = 0; j <= gridRows; j++){
-    const y = Math.round(j * stepY) + 0.5;
+    const y = Math.floor(j * stepY) + 0.5;
     path.moveTo(0, y);
     path.lineTo(cw, y);
   }
 
   targetCtx.stroke(path);
 
-  // contorno final (direita e embaixo garantidos)
+  // contorno final
   targetCtx.strokeRect(0.5, 0.5, cw - 1, ch - 1);
 }
 
@@ -680,10 +717,8 @@ function renderAll(){
   }
 }
 
-function resizeBufferToCanvas(){ buffer.width = artCanvas.width; buffer.height = artCanvas.height; }
-
 // ==============================================
-// FERRAMENTA DE PINCEL/BORRACHA (modificada)
+// FUNÇÃO DE PINTURA CORRIGIDA
 // ==============================================
 
 function paintCellAt(xPixel, yPixel){
@@ -692,19 +727,20 @@ function paintCellAt(xPixel, yPixel){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
 
+  // Usar Math.floor consistente
   const x = Math.floor(xPixel / stepX);
   const y = Math.floor(yPixel / stepY);
   if(x < 0 || y < 0 || x >= gridCols || y >= gridRows) return;
 
-  const px = Math.round(x * stepX);
-  const py = Math.round(y * stepY);
+  // Calcular posição exata do pixel
+  const px = Math.floor(x * stepX);
+  const py = Math.floor(y * stepY);
   const w = Math.ceil(stepX);
   const h = Math.ceil(stepY);
 
   bctx.imageSmoothingEnabled = false;
 
   if(currentColor === 'eraser' || currentTool === 'eraser'){
-    // apaga de verdade (transparência real para PNG)
     bctx.clearRect(px, py, w, h);
   } else if (currentTool === 'pencil') {
     bctx.fillStyle = currentColor;
@@ -735,8 +771,8 @@ function bucketFill(xPixel, yPixel){
   if(x < 0 || y < 0 || x >= gridCols || y >= gridRows) return;
   
   // Obter a cor do pixel clicado
-  const px = Math.round(x * stepX);
-  const py = Math.round(y * stepY);
+  const px = Math.floor(x * stepX);
+  const py = Math.floor(y * stepY);
   const pixelData = bctx.getImageData(px, py, 1, 1).data;
   const targetColor = `rgba(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]}, ${pixelData[3]/255})`;
   
@@ -777,8 +813,8 @@ function floodFill(startX, startY, targetColor, newColor){
     if(x < 0 || x >= gridCols || y < 0 || y >= gridRows) continue;
     if(visited[index]) continue;
     
-    const px = Math.round(x * stepX);
-    const py = Math.round(y * stepY);
+    const px = Math.floor(x * stepX);
+    const py = Math.floor(y * stepY);
     const pixelData = bctx.getImageData(px, py, 1, 1).data;
     const currentColor = `rgba(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]}, ${pixelData[3]/255})`;
     
@@ -865,10 +901,10 @@ function captureSelectionData(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const pw = Math.round(selection.width * stepX);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const pw = Math.ceil(selection.width * stepX);
+  const ph = Math.ceil(selection.height * stepY);
   
   selection.data = bctx.getImageData(px, py, pw, ph);
 }
@@ -879,10 +915,10 @@ function drawSelection(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const pw = Math.round(selection.width * stepX);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const pw = Math.ceil(selection.width * stepX);
+  const ph = Math.ceil(selection.height * stepY);
   
   // Desenhar overlay da seleção
   ctx.save();
@@ -927,15 +963,15 @@ function updateSelectionOverlay(){
     const maxX = Math.min(gridCols-1, Math.max(startCellX, endCellX));
     const maxY = Math.min(gridRows-1, Math.max(startCellY, endCellY));
     
-    px = Math.round(minX * stepX);
-    py = Math.round(minY * stepY);
-    pw = Math.round((maxX - minX + 1) * stepX);
-    ph = Math.round((maxY - minY + 1) * stepY);
+    px = Math.floor(minX * stepX);
+    py = Math.floor(minY * stepY);
+    pw = Math.ceil((maxX - minX + 1) * stepX);
+    ph = Math.ceil((maxY - minY + 1) * stepY);
   } else if (selection) {
-    px = Math.round(selection.x * stepX);
-    py = Math.round(selection.y * stepY);
-    pw = Math.round(selection.width * stepX);
-    ph = Math.round(selection.height * stepY);
+    px = Math.floor(selection.x * stepX);
+    py = Math.floor(selection.y * stepY);
+    pw = Math.ceil(selection.width * stepX);
+    ph = Math.ceil(selection.height * stepY);
   }
   
   if (pw > 0 && ph > 0) {
@@ -953,9 +989,9 @@ function showSelectionControls(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const ph = Math.ceil(selection.height * stepY);
   
   selectionControls.style.left = (px + (selection.width * stepX) / 2) + 'px';
   selectionControls.style.top = (py - 40) + 'px';
@@ -980,10 +1016,10 @@ function cutSelection(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const pw = Math.round(selection.width * stepX);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const pw = Math.ceil(selection.width * stepX);
+  const ph = Math.ceil(selection.height * stepY);
   
   bctx.clearRect(px, py, pw, ph);
   
@@ -1011,8 +1047,8 @@ function pasteSelection(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(centerX * stepX);
-  const py = Math.round(centerY * stepY);
+  const px = Math.floor(centerX * stepX);
+  const py = Math.floor(centerY * stepY);
   
   // Limpar seleção anterior
   clearSelection();
@@ -1040,10 +1076,10 @@ function deleteSelection(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const pw = Math.round(selection.width * stepX);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const pw = Math.ceil(selection.width * stepX);
+  const ph = Math.ceil(selection.height * stepY);
   
   bctx.clearRect(px, py, pw, ph);
   
@@ -1057,10 +1093,10 @@ function startMovingSelection(xPixel, yPixel){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const px = Math.round(selection.x * stepX);
-  const py = Math.round(selection.y * stepY);
-  const pw = Math.round(selection.width * stepX);
-  const ph = Math.round(selection.height * stepY);
+  const px = Math.floor(selection.x * stepX);
+  const py = Math.floor(selection.y * stepY);
+  const pw = Math.ceil(selection.width * stepX);
+  const ph = Math.ceil(selection.height * stepY);
   
   // Verificar se o clique está dentro da seleção
   if (xPixel >= px && xPixel <= px + pw && yPixel >= py && yPixel <= py + ph) {
@@ -1100,8 +1136,8 @@ function endMovingSelection(){
   const stepX = artCanvas.width / gridCols;
   const stepY = artCanvas.height / gridRows;
   
-  const oldPx = Math.round(selection.x * stepX);
-  const oldPy = Math.round(selection.y * stepY);
+  const oldPx = Math.floor(selection.x * stepX);
+  const oldPy = Math.floor(selection.y * stepY);
   
   // Limpar área original temporariamente
   const tempCanvas = document.createElement('canvas');
@@ -1263,15 +1299,24 @@ document.getElementById('deleteSelection').onclick = deleteSelection;
 document.getElementById('cancelSelection').onclick = clearSelection;
 
 // ==============================================
-// RESTANTE DO CÓDIGO (mantido igual)
+// MODIFICAÇÕES NAS FUNÇÕES DE GRID
 // ==============================================
 
 // toolbar actions
 document.getElementById('newArt').onclick = ()=>{ pushUndo(); bctx.clearRect(0,0,buffer.width,buffer.height); renderAll(); clearSelection(); };
+
+// Modificar evento de mudança do tamanho do grid
 document.getElementById('gridSize').onchange = (e)=>{
   const v = parseInt(e.target.value,10)||64;
   gridCols = v;
   gridRows = v;
+  
+  // Usar função corrigida para atualizar canvas
+  updateCanvasSizeForGrid(v, v);
+  
+  // Atualizar o modal de importação
+  updateCurrentGridSize();
+  
   renderAll();
   clearSelection();
 };
@@ -1398,21 +1443,8 @@ confirmImportBtn.onclick = () => {
       // Atualizar select do grid para refletir o novo tamanho
       document.getElementById('gridSize').value = newCols === newRows ? newCols.toString() : 'custom';
       
-      // Calcular novo tamanho do canvas mantendo proporção
-      const canvasSize = 640;
-      const aspectRatio = newCols / newRows;
-      
-      if (aspectRatio >= 1) {
-        artCanvas.width = canvasSize;
-        artCanvas.height = Math.round(canvasSize / aspectRatio);
-      } else {
-        artCanvas.height = canvasSize;
-        artCanvas.width = Math.round(canvasSize * aspectRatio);
-      }
-      
-      // Atualizar buffer
-      buffer.width = artCanvas.width;
-      buffer.height = artCanvas.height;
+      // Usar a nova função para atualizar o canvas
+      updateCanvasSizeForGrid(newCols, newRows);
       
       // Limpar buffer
       bctx.clearRect(0, 0, buffer.width, buffer.height);
@@ -1656,6 +1688,22 @@ toggleExportGridBtn.onclick = ()=>{
 document.getElementById('undoBtn').onclick = undo;
 document.getElementById('redoBtn').onclick = redo;
 
+// Modificar função de criar grid customizado
+document.getElementById('createGrid').onclick = ()=>{
+  const w = parseInt(prompt('Largura do grid (colunas):'),10);
+  const h = parseInt(prompt('Altura do grid (linhas):'),10);
+  if(!w || !h || w<=0 || h<=0) return alert('Valores inválidos');
+
+  gridCols = w;
+  gridRows = h;
+  
+  // Usar função corrigida para atualizar canvas
+  updateCanvasSizeForGrid(w, h);
+  
+  renderAll();
+  clearSelection();
+};
+
 // color history
 function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) return; if(!colorHistory.includes(hex)){ colorHistory.push(hex); const div = document.getElementById('colorHistory'); const btn = document.createElement('div'); btn.className='color-btn'; btn.style.background=hex; btn.title=hex; btn.onclick = ()=>{
         currentColor = hex;
@@ -1667,24 +1715,6 @@ function addColorToHistory(hex){ if(!/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)) retur
       }; div.appendChild(btn); } }
 
 document.getElementById('addColor').onclick = ()=>{ const hex = document.getElementById('customColor').value.trim(); if(/^#([0-9A-Fa-f]{3}){1,2}$/.test(hex)){ addColorToHistory(hex); currentColor = hex; currentTool = 'pencil'; updateToolButtons(); updateCursor(); eraserBtn.classList.remove('activeTool'); document.querySelectorAll('#colorHistory .color-btn').forEach(b=>b.classList.remove('selected')); const last = document.querySelector('#colorHistory .color-btn:last-child'); if(last) last.classList.add('selected'); } else alert('HEX inválido. Use #fff ou #1a2b3c'); };
-
-// create custom grid
-document.getElementById('createGrid').onclick = ()=>{
-  const w = parseInt(prompt('Largura do grid (colunas):'),10);
-  const h = parseInt(prompt('Altura do grid (linhas):'),10);
-  if(!w || !h || w<=0 || h<=0) return alert('Valores inválidos');
-
-  gridCols = w;
-  gridRows = h;
-
-  artCanvas.width = 640;
-  artCanvas.height = Math.round(640 * (h / w));
-  buffer.width = artCanvas.width;
-  buffer.height = artCanvas.height;
-
-  renderAll();
-  clearSelection();
-};
 
 // seed colors
 const seeds = ['#000000', '#141414', '#242424', '#333333','#424242', '#5c5c5c','#737373', '#8c8c8c', '#a3a3a3', '#bdbdbd', '#e0e0e0', '#2b3733',
@@ -1702,10 +1732,16 @@ const seeds = ['#000000', '#141414', '#242424', '#333333','#424242', '#5c5c5c','
   '#1a0500', '#1a0900','#1a0e00', '#1a1200','#1a1700', '#161a00','#101a00', '#0a1a00','#001a01', '#001a08', '#001a0f', '#001a15','#00171a', '#00101a','#00081a', '#00011a','#06001a', '#0d001a','#14001a', '#1a0017', '#1a0011', '#1a000a','#1a0003'];
 seeds.forEach(addColorToHistory);
 
-// initial
-renderAll(); undoStack.push(buffer.toDataURL()); updateUndoRedoButtons();
-updateCurrentGridSize(); // Atualizar tamanho do grid no modal
-updateCursor(); // Atualizar cursor inicial
+// ==============================================
+// INICIALIZAÇÃO CORRIGIDA
+// ==============================================
+
+// Inicializar com tamanho correto
+updateCanvasSizeForGrid(64, 64);
+undoStack.push(buffer.toDataURL());
+updateUndoRedoButtons();
+updateCurrentGridSize();
+updateCursor();
 
 // ==============================================
 // CORREÇÃO DOS ATALHOS DE TECLADO
